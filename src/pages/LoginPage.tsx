@@ -1,18 +1,27 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router';
+import { Navigate } from 'react-router';
 import { requestOtp, verifyOtp } from '@/api/auth';
 import { ApiError } from '@/api/client';
 import { getErrorMessage } from '@/api/error-messages';
-import { useAuth } from '@/auth/auth-context';
+import { signIn } from '@/auth/session-store';
+import { useAuth } from '@/auth/use-auth';
 import { normalizePhone } from '@/auth/phone';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export function LoginPage() {
+  const { status } = useAuth();
   const [phoneInput, setPhoneInput] = useState('');
   const [sentTo, setSentTo] = useState<string | null>(null);
+
+  if (status === 'loading') {
+    return null;
+  }
+  if (status === 'authenticated') {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 px-4">
@@ -97,16 +106,11 @@ function CodeStep({
   phone: string;
   onChangePhone: () => void;
 }) {
-  const { signIn } = useAuth();
-  const navigate = useNavigate();
   const [code, setCode] = useState('');
   const [inputError, setInputError] = useState<string | null>(null);
   const mutation = useMutation({
     mutationFn: verifyOtp,
-    onSuccess: (response) => {
-      signIn(response);
-      navigate('/', { replace: true });
-    },
+    onSuccess: signIn,
   });
 
   function handleSubmit(event: FormEvent) {

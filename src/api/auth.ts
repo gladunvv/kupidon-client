@@ -19,10 +19,6 @@ export function verifyOtp(payload: VerifyOtpPayload): Promise<AuthResponse> {
   });
 }
 
-export function refreshToken(): Promise<AuthResponse> {
-  return apiRequest<AuthResponse>('/auth/refresh-token', { method: 'POST' });
-}
-
 export function logout(): Promise<null> {
   return apiRequest<null>('/auth/logout', { method: 'POST' });
 }
