@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { requestOtp } from '@/api/auth';
+import { useNavigate } from 'react-router';
+import { requestOtp, verifyOtp } from '@/api/auth';
 import { ApiError } from '@/api/client';
 import { getErrorMessage } from '@/api/error-messages';
+import { useAuth } from '@/auth/auth-context';
 import { normalizePhone } from '@/auth/phone';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,12 +12,36 @@ import { Label } from '@/components/ui/label';
 
 export function LoginPage() {
   const [phoneInput, setPhoneInput] = useState('');
-  const [inputError, setInputError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
+  return (
+    <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 px-4">
+      {sentTo ? (
+        <CodeStep phone={sentTo} onChangePhone={() => setSentTo(null)} />
+      ) : (
+        <PhoneStep
+          phoneInput={phoneInput}
+          onPhoneInputChange={setPhoneInput}
+          onSent={setSentTo}
+        />
+      )}
+    </main>
+  );
+}
+
+function PhoneStep({
+  phoneInput,
+  onPhoneInputChange,
+  onSent,
+}: {
+  phoneInput: string;
+  onPhoneInputChange: (value: string) => void;
+  onSent: (phone: string) => void;
+}) {
+  const [inputError, setInputError] = useState<string | null>(null);
   const mutation = useMutation({
     mutationFn: requestOtp,
-    onSuccess: (_data, { phone }) => setSentTo(phone),
+    onSuccess: (_data, { phone }) => onSent(phone),
   });
 
   function handleSubmit(event: FormEvent) {
@@ -29,26 +55,6 @@ export function LoginPage() {
     mutation.mutate({ phone });
   }
 
-  if (sentTo) {
-    return (
-      <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-4 px-4">
-        <h1 className="text-2xl font-semibold">Код отправлен</h1>
-        <p className="text-muted-foreground">
-          Мы отправили код на {sentTo}. Ввод кода появится в задаче AUTH-02.
-        </p>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setSentTo(null);
-            mutation.reset();
-          }}
-        >
-          Изменить номер
-        </Button>
-      </main>
-    );
-  }
-
   const serverError =
     mutation.error instanceof ApiError && mutation.error.code === 'BAD_REQUEST'
       ? 'Сервер не принял номер. Проверьте его'
@@ -56,7 +62,7 @@ export function LoginPage() {
   const error = inputError ?? serverError;
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 px-4">
+    <>
       <h1 className="text-2xl font-semibold">Вход</h1>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
         <Label htmlFor="phone">Номер телефона</Label>
@@ -67,7 +73,7 @@ export function LoginPage() {
           autoComplete="tel"
           placeholder="+7 999 123-45-67"
           value={phoneInput}
-          onChange={(event) => setPhoneInput(event.target.value)}
+          onChange={(event) => onPhoneInputChange(event.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? 'phone-error' : undefined}
         />
@@ -80,6 +86,71 @@ export function LoginPage() {
           {mutation.isPending ? 'Отправляем…' : 'Получить код'}
         </Button>
       </form>
-    </main>
+    </>
+  );
+}
+
+function CodeStep({
+  phone,
+  onChangePhone,
+}: {
+  phone: string;
+  onChangePhone: () => void;
+}) {
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
+  const [code, setCode] = useState('');
+  const [inputError, setInputError] = useState<string | null>(null);
+  const mutation = useMutation({
+    mutationFn: verifyOtp,
+    onSuccess: (response) => {
+      signIn(response);
+      navigate('/', { replace: true });
+    },
+  });
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!/^\d{4,8}$/.test(code)) {
+      setInputError('Введите код из СМС');
+      return;
+    }
+    setInputError(null);
+    mutation.mutate({ phone, otp: code });
+  }
+
+  const error =
+    inputError ?? (mutation.error && getErrorMessage(mutation.error));
+
+  return (
+    <>
+      <h1 className="text-2xl font-semibold">Введите код</h1>
+      <p className="text-muted-foreground">Код отправлен на {phone}</p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
+        <Label htmlFor="otp">Код из СМС</Label>
+        <Input
+          id="otp"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={8}
+          autoFocus
+          value={code}
+          onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? 'otp-error' : undefined}
+        />
+        {error && (
+          <p id="otp-error" role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        <Button type="submit" disabled={mutation.isPending}>
+          {mutation.isPending ? 'Проверяем…' : 'Войти'}
+        </Button>
+        <Button type="button" variant="outline" onClick={onChangePhone}>
+          Изменить номер
+        </Button>
+      </form>
+    </>
   );
 }
