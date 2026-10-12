@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export function LoginPage() {
-  const { status } = useAuth();
+  const { status, signOutReason } = useAuth();
   const [phoneInput, setPhoneInput] = useState('');
   const [sentTo, setSentTo] = useState<string | null>(null);
 
@@ -25,6 +25,15 @@ export function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 px-4">
+      {signOutReason === 'session-replaced' && (
+        <p
+          role="status"
+          className="rounded-lg border border-border bg-muted px-3 py-2 text-sm"
+        >
+          В ваш аккаунт вошли на другом устройстве, поэтому здесь сессия
+          завершена. Войдите снова, если это были вы.
+        </p>
+      )}
       {sentTo ? (
         <CodeStep phone={sentTo} onChangePhone={() => setSentTo(null)} />
       ) : (

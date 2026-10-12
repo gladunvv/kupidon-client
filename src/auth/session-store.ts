@@ -1,9 +1,11 @@
 import type { AuthResponse } from '@/types/auth';
 import type { User } from '@/types/user';
 
+export type SignOutReason = 'session-replaced';
+
 export type Session =
   | { status: 'loading' }
-  | { status: 'unauthenticated' }
+  | { status: 'unauthenticated'; reason?: SignOutReason }
   | { status: 'authenticated'; accessToken: string; user: User };
 
 // In-memory only, never localStorage/sessionStorage: after a reload the
@@ -33,8 +35,8 @@ export function signIn(response: AuthResponse): void {
   });
 }
 
-export function signOut(): void {
-  setSession({ status: 'unauthenticated' });
+export function signOut(reason?: SignOutReason): void {
+  setSession({ status: 'unauthenticated', reason });
 }
 
 export function getAccessToken(): string | null {
