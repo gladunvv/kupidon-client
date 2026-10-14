@@ -11,7 +11,7 @@ export function HomePage() {
   // fails, the refresh cookie is still valid and a reload would sign back in.
   const logoutMutation = useMutation({
     mutationFn: logout,
-    onSuccess: signOut,
+    onSuccess: () => signOut(),
   });
 
   return (

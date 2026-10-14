@@ -6,5 +6,7 @@ export function useAuth() {
   return {
     status: session.status,
     user: session.status === 'authenticated' ? session.user : null,
+    signOutReason:
+      session.status === 'unauthenticated' ? session.reason : undefined,
   };
 }

@@ -105,7 +105,11 @@ async function doRefresh(): Promise<boolean> {
   } catch (error) {
     const rejected = error instanceof ApiError && error.status === 401;
     if (rejected || getSession().status === 'loading') {
-      signOut();
+      signOut(
+        error instanceof ApiError && error.code === 'SESSION_REPLACED'
+          ? 'session-replaced'
+          : undefined,
+      );
     }
     return false;
   }
