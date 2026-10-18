@@ -1,18 +1,20 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Navigate } from 'react-router';
+import { Navigate, useLocation } from 'react-router';
 import { requestOtp, verifyOtp } from '@/api/auth';
 import { ApiError } from '@/api/client';
 import { getErrorMessage } from '@/api/error-messages';
 import { signIn } from '@/auth/session-store';
 import { useAuth } from '@/auth/use-auth';
 import { normalizePhone } from '@/auth/phone';
+import { getReturnPath } from '@/routes/return-path';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export function LoginPage() {
   const { status, signOutReason } = useAuth();
+  const location = useLocation();
   const [phoneInput, setPhoneInput] = useState('');
   const [sentTo, setSentTo] = useState<string | null>(null);
 
@@ -20,7 +22,7 @@ export function LoginPage() {
     return null;
   }
   if (status === 'authenticated') {
-    return <Navigate to="/" replace />;
+    return <Navigate to={getReturnPath(location.state)} replace />;
   }
 
   return (
