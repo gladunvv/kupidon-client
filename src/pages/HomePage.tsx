@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
+import { Link } from 'react-router';
 import { logout } from '@/api/auth';
 import { getErrorMessage } from '@/api/error-messages';
 import { signOut } from '@/auth/session-store';
@@ -21,6 +22,9 @@ export function HomePage() {
       <p className="text-muted-foreground">
         Кандидаты появятся в задаче FEED-01
       </p>
+      <Link to="/profile" className="text-sm underline underline-offset-4">
+        Профиль
+      </Link>
       <Button
         variant="outline"
         onClick={() => logoutMutation.mutate()}
