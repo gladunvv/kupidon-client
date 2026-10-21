@@ -1,3 +1,5 @@
+import type { City, Goal, Interest, LifestyleOption } from '@/types/reference';
+
 export type Gender = 'male' | 'female' | 'other';
 
 export interface SearchPreferences {
@@ -35,43 +37,16 @@ export interface User {
   coordinates?: number[];
 }
 
-export interface ProfileCity {
-  _id: string;
-  name: string;
-  fullName?: string;
-  countryCode?: string;
-}
-
-export interface ProfileInterest {
-  _id: string;
-  label: string;
-  value: string;
-  weight: number;
-  icon: string;
-}
-
-export interface ProfileGoal {
-  _id: string;
-  name: string;
-  weight: number;
-  icon: string;
-}
-
-export interface ProfileLifestyleOption {
-  _id: string;
-  category: { _id: string; name: string; description?: string } | null;
-}
-
 // GET/PUT /users return reference fields populated; the auth response's
 // `user` carries them as bare ids — hence a separate type.
 export interface Profile extends Omit<
   User,
   'city' | 'interests' | 'goals' | 'lifestyleOptions'
 > {
-  city?: ProfileCity | null;
-  interests: ProfileInterest[];
-  goals: ProfileGoal[];
-  lifestyleOptions: ProfileLifestyleOption[];
+  city?: City | null;
+  interests: Interest[];
+  goals: Goal[];
+  lifestyleOptions: LifestyleOption[];
 }
 
 // Mirrors api's UpdateProfileDto (src/users/dto/update-profile.dto.ts).

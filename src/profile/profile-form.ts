@@ -1,3 +1,4 @@
+import type { City, LifestyleOption } from '@/types/reference';
 import type { Profile, UpdateProfilePayload } from '@/types/user';
 
 export interface ProfileFormValues {
@@ -8,11 +9,18 @@ export interface ProfileFormValues {
   occupation: string;
   education: string;
   height: string;
+  city: City | null;
+  interests: string[];
+  goals: string[];
+  lifestyleOptions: string[];
 }
 
-export type ProfileFormErrors = Partial<
-  Record<keyof ProfileFormValues, string>
+type TextField = Exclude<
+  keyof ProfileFormValues,
+  'city' | 'interests' | 'goals' | 'lifestyleOptions'
 >;
+
+export type ProfileFormErrors = Partial<Record<TextField, string>>;
 
 export function toFormValues(profile: Profile): ProfileFormValues {
   return {
@@ -23,6 +31,10 @@ export function toFormValues(profile: Profile): ProfileFormValues {
     occupation: profile.occupation ?? '',
     education: profile.education ?? '',
     height: profile.height?.toString() ?? '',
+    city: profile.city ?? null,
+    interests: profile.interests.map((item) => item._id),
+    goals: profile.goals.map((item) => item._id),
+    lifestyleOptions: profile.lifestyleOptions.map((item) => item._id),
   };
 }
 
@@ -69,5 +81,38 @@ export function buildProfilePayload(values: ProfileFormValues): {
     payload.gender = values.gender;
   }
 
+  // city is validated as a Mongo id by the api, so it can be changed but not
+  // cleared; reference arrays can be sent empty to clear them.
+  if (values.city) {
+    payload.city = values.city._id;
+  }
+  payload.interests = values.interests;
+  payload.goals = values.goals;
+  payload.lifestyleOptions = values.lifestyleOptions;
+
   return { errors, payload };
+}
+
+export function toggleId(selected: string[], id: string): string[] {
+  return selected.includes(id)
+    ? selected.filter((item) => item !== id)
+    : [...selected, id];
+}
+
+// One option per lifestyle category (e.g. a single answer for "Алкоголь"):
+// picking an option replaces whatever was chosen in its category, picking the
+// chosen one again clears the category.
+export function selectLifestyleOption(
+  selected: string[],
+  option: LifestyleOption,
+  allOptions: LifestyleOption[],
+): string[] {
+  const categoryId = option.category?._id;
+  const sameCategory = new Set(
+    allOptions
+      .filter((item) => item.category?._id === categoryId)
+      .map((item) => item._id),
+  );
+  const rest = selected.filter((id) => !sameCategory.has(id));
+  return selected.includes(option._id) ? rest : [...rest, option._id];
 }
