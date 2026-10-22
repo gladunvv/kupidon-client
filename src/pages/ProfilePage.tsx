@@ -5,6 +5,7 @@ import { useGoals, useInterests, useLifestyleOptions } from '@/api/reference';
 import { useProfile, useUpdateProfile } from '@/api/users';
 import { ChipGroup } from '@/profile/ChipGroup';
 import { CityPicker } from '@/profile/CityPicker';
+import { PhotosSection } from '@/profile/PhotosSection';
 import {
   buildProfilePayload,
   selectLifestyleOption,
@@ -42,6 +43,7 @@ export function ProfilePage() {
           </Button>
         </div>
       )}
+      {profile.data && <PhotosSection photos={profile.data.photos} />}
       {profile.data && <ProfileForm profile={profile.data} />}
     </main>
   );
