@@ -10,6 +10,8 @@ const MESSAGES: Record<string, string> = {
   IMAGE_RESOLUTION_TOO_LOW:
     'Слишком маленькое изображение — нужно от 200×200 px',
   PHOTO_UPLOAD_FAILED: 'Не удалось сохранить фото. Попробуйте ещё раз',
+  PHOTO_COUNT_MISMATCH: 'Фото изменились в другом окне — список обновлён',
+  INVALID_PHOTOS: 'Фото изменились в другом окне — список обновлён',
   OTP_ATTEMPTS_EXCEEDED:
     'Слишком много неверных попыток. Запросите новый код позже',
   BAD_REQUEST: 'Проверьте введённые данные',
