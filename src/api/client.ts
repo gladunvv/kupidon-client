@@ -30,6 +30,19 @@ export class ApiError extends Error {
   }
 }
 
+function unwrap<T>(body: ApiResponse<T>, status: number): T {
+  if (!body.success) {
+    throw new ApiError(
+      body.message,
+      body.error.code,
+      status,
+      body.meta?.requestId,
+      body.error.details,
+    );
+  }
+  return body.data;
+}
+
 async function send<T>(
   path: string,
   init: RequestInit,
@@ -44,37 +57,72 @@ async function send<T>(
       ...init.headers,
     },
   });
-
-  const body = (await response.json()) as ApiResponse<T>;
-
-  if (!body.success) {
-    throw new ApiError(
-      body.message,
-      body.error.code,
-      response.status,
-      body.meta?.requestId,
-      body.error.details,
-    );
-  }
-
-  return body.data;
+  return unwrap((await response.json()) as ApiResponse<T>, response.status);
 }
 
-export async function apiRequest<T>(
+// XHR instead of fetch: fetch exposes no upload progress. Content-Type is
+// left to the browser so the multipart boundary is set correctly.
+function sendWithProgress<T>(
   path: string,
-  init: RequestInit = {},
+  body: FormData,
+  accessToken: string | null,
+  onProgress?: (fraction: number) => void,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${env.apiUrl}${path}`);
+    xhr.withCredentials = true;
+    if (accessToken) {
+      xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+    }
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress?.(event.loaded / event.total);
+    };
+    xhr.onload = () => {
+      try {
+        resolve(
+          unwrap(JSON.parse(xhr.responseText) as ApiResponse<T>, xhr.status),
+        );
+      } catch (error) {
+        reject(error);
+      }
+    };
+    xhr.onerror = () => reject(new TypeError('Network request failed'));
+    xhr.send(body);
+  });
+}
+
+async function withAuthRetry<T>(
+  run: (accessToken: string | null) => Promise<T>,
 ): Promise<T> {
   const accessToken = getAccessToken();
   try {
-    return await send<T>(path, init, accessToken);
+    return await run(accessToken);
   } catch (error) {
     const expired =
       accessToken && error instanceof ApiError && error.status === 401;
     if (expired && (await refreshSession())) {
-      return send<T>(path, init, getAccessToken());
+      return run(getAccessToken());
     }
     throw error;
   }
+}
+
+export function apiRequest<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  return withAuthRetry((token) => send<T>(path, init, token));
+}
+
+export function apiUpload<T>(
+  path: string,
+  body: FormData,
+  onProgress?: (fraction: number) => void,
+): Promise<T> {
+  return withAuthRetry((token) =>
+    sendWithProgress<T>(path, body, token, onProgress),
+  );
 }
 
 let refreshInFlight: Promise<boolean> | null = null;
