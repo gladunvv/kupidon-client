@@ -7,6 +7,7 @@ import { useCityNames, useGoals } from '@/api/reference';
 import { signOut } from '@/auth/session-store';
 import { Button } from '@/components/ui/button';
 import { CandidateCard } from '@/feed/CandidateCard';
+import { FeedFilters } from '@/feed/FeedFilters';
 
 export function HomePage() {
   // Local session is dropped only after the server confirms: if the request
@@ -39,6 +40,7 @@ export function HomePage() {
           Не удалось выйти: {getErrorMessage(logoutMutation.error)}
         </p>
       )}
+      <FeedFilters />
       <Feed />
     </main>
   );
