@@ -30,6 +30,19 @@ export function useLifestyleOptions() {
   });
 }
 
+// Candidates carry `city` as a bare id and the api has no lookup by id, so
+// names come from one full list (capped at 100 by the api — enough for the
+// seeded dictionary; a by-id endpoint is needed once it grows past that).
+export function useCityNames() {
+  return useQuery({
+    queryKey: ['reference', 'cities', 'all'],
+    queryFn: () => apiRequest<City[]>('/reference/cities?limit=100'),
+    select: (cities) =>
+      new Map(cities.map((city) => [city._id, city.name] as const)),
+    ...forever,
+  });
+}
+
 export function useCities(search: string) {
   const term = search.trim();
   return useQuery({

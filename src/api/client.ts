@@ -5,7 +5,11 @@ import {
   signIn,
   signOut,
 } from '@/auth/session-store';
-import type { ApiResponse } from '@/types/api';
+import type {
+  ApiResponse,
+  PaginationMeta,
+  SuccessApiResponse,
+} from '@/types/api';
 import type { AuthResponse } from '@/types/auth';
 
 export class ApiError extends Error {
@@ -30,7 +34,10 @@ export class ApiError extends Error {
   }
 }
 
-function unwrap<T>(body: ApiResponse<T>, status: number): T {
+function unwrap<T>(
+  body: ApiResponse<T>,
+  status: number,
+): SuccessApiResponse<T> {
   if (!body.success) {
     throw new ApiError(
       body.message,
@@ -40,14 +47,14 @@ function unwrap<T>(body: ApiResponse<T>, status: number): T {
       body.error.details,
     );
   }
-  return body.data;
+  return body;
 }
 
 async function send<T>(
   path: string,
   init: RequestInit,
   accessToken: string | null,
-): Promise<T> {
+): Promise<SuccessApiResponse<T>> {
   const response = await fetch(`${env.apiUrl}${path}`, {
     ...init,
     credentials: 'include',
@@ -81,7 +88,8 @@ function sendWithProgress<T>(
     xhr.onload = () => {
       try {
         resolve(
-          unwrap(JSON.parse(xhr.responseText) as ApiResponse<T>, xhr.status),
+          unwrap(JSON.parse(xhr.responseText) as ApiResponse<T>, xhr.status)
+            .data,
         );
       } catch (error) {
         reject(error);
@@ -108,11 +116,24 @@ async function withAuthRetry<T>(
   }
 }
 
-export function apiRequest<T>(
+export async function apiRequest<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  return withAuthRetry((token) => send<T>(path, init, token));
+  return (await withAuthRetry((token) => send<T>(path, init, token))).data;
+}
+
+export interface Page<T> {
+  items: T[];
+  pagination: PaginationMeta;
+}
+
+export async function apiRequestPage<T>(path: string): Promise<Page<T>> {
+  const body = await withAuthRetry((token) => send<T[]>(path, {}, token));
+  if (!body.meta?.pagination) {
+    throw new Error(`Expected meta.pagination in response for ${path}`);
+  }
+  return { items: body.data, pagination: body.meta.pagination };
 }
 
 export function apiUpload<T>(
@@ -146,9 +167,12 @@ function withRefreshLock(fn: () => Promise<boolean>): Promise<boolean> {
 
 async function doRefresh(): Promise<boolean> {
   try {
-    signIn(
-      await send<AuthResponse>('/auth/refresh-token', { method: 'POST' }, null),
+    const body = await send<AuthResponse>(
+      '/auth/refresh-token',
+      { method: 'POST' },
+      null,
     );
+    signIn(body.data);
     return true;
   } catch (error) {
     const rejected = error instanceof ApiError && error.status === 401;
