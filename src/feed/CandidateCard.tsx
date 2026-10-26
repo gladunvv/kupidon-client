@@ -1,13 +1,16 @@
+import type { ReactNode } from 'react';
 import type { Candidate } from '@/types/candidate';
 
 export function CandidateCard({
   candidate,
   cityName,
   goalNames,
+  actions,
 }: {
   candidate: Candidate;
   cityName?: string;
   goalNames: string[];
+  actions?: ReactNode;
 }) {
   const [photo] = candidate.photos;
   const title = [candidate.name ?? 'Без имени', candidate.age]
@@ -67,6 +70,7 @@ export function CandidateCard({
             ))}
           </ul>
         )}
+        {actions}
       </div>
     </article>
   );

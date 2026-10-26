@@ -1,13 +1,17 @@
-import { useMutation } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { logout } from '@/api/auth';
-import { useCandidates } from '@/api/candidates';
+import { passCandidate, useCandidates, usePassedIds } from '@/api/candidates';
 import { getErrorMessage } from '@/api/error-messages';
+import { useLike } from '@/api/match';
 import { useCityNames, useGoals } from '@/api/reference';
 import { signOut } from '@/auth/session-store';
 import { Button } from '@/components/ui/button';
 import { CandidateCard } from '@/feed/CandidateCard';
 import { FeedFilters } from '@/feed/FeedFilters';
+import { MatchDialog } from '@/feed/MatchDialog';
+import type { Candidate } from '@/types/candidate';
 
 export function HomePage() {
   // Local session is dropped only after the server confirms: if the request
@@ -47,9 +51,39 @@ export function HomePage() {
 }
 
 function Feed() {
+  const queryClient = useQueryClient();
   const candidates = useCandidates();
   const cityNames = useCityNames();
   const goals = useGoals();
+  const passed = usePassedIds();
+  const like = useLike();
+  const [match, setMatch] = useState<{
+    candidate: Candidate;
+    dialogId: string;
+  } | null>(null);
+  // A like removes the user from the server-side list, so offset pages after
+  // it shift by one: the next "show more" would skip someone. Loaded pages
+  // are refetched first whenever that happened.
+  const shifted = useRef(false);
+
+  function likeCandidate(candidate: Candidate) {
+    like.mutate(candidate, {
+      onSuccess: (result) => {
+        shifted.current = true;
+        if (result.matched) {
+          setMatch({ candidate, dialogId: result.dialog._id });
+        }
+      },
+    });
+  }
+
+  async function loadMore() {
+    if (shifted.current) {
+      shifted.current = false;
+      await candidates.refetch();
+    }
+    void candidates.fetchNextPage();
+  }
 
   if (candidates.isPending) {
     return <p className="text-muted-foreground">Загружаем анкеты…</p>;
@@ -68,7 +102,10 @@ function Feed() {
     );
   }
 
-  const items = candidates.data.pages.flatMap((page) => page.items);
+  const passedIds = new Set(passed.data);
+  const items = candidates.data.pages
+    .flatMap((page) => page.items)
+    .filter((candidate) => !passedIds.has(candidate._id));
   const total = candidates.data.pages[0]?.pagination.total ?? 0;
   // Cached pages are still shown when a background refetch fails, so the
   // failure has to be surfaced explicitly or stale results look current.
@@ -83,7 +120,7 @@ function Feed() {
     </div>
   );
 
-  if (items.length === 0) {
+  if (items.length === 0 && !candidates.hasNextPage) {
     return (
       <>
         {refetchFailed}
@@ -97,6 +134,18 @@ function Feed() {
   return (
     <section className="flex flex-col gap-4" aria-label="Анкеты">
       {refetchFailed}
+      {match && (
+        <MatchDialog
+          candidate={match.candidate}
+          dialogId={match.dialogId}
+          onClose={() => setMatch(null)}
+        />
+      )}
+      {like.error && (
+        <p role="alert" className="text-sm text-destructive">
+          Не удалось поставить лайк: {getErrorMessage(like.error)}
+        </p>
+      )}
       <p className="text-sm text-muted-foreground">
         Показано {items.length} из {total}
       </p>
@@ -110,6 +159,19 @@ function Feed() {
           goalNames={(candidate.goals ?? [])
             .map((id) => goalNames.get(id))
             .filter((name): name is string => Boolean(name))}
+          actions={
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                onClick={() => passCandidate(queryClient, candidate._id)}
+              >
+                Пропустить
+              </Button>
+              <Button onClick={() => likeCandidate(candidate)}>
+                ♥ Нравится
+              </Button>
+            </div>
+          }
         />
       ))}
       {candidates.isFetchNextPageError && (
@@ -120,10 +182,10 @@ function Feed() {
       {candidates.hasNextPage && (
         <Button
           variant="outline"
-          disabled={candidates.isFetchingNextPage}
-          onClick={() => candidates.fetchNextPage()}
+          disabled={candidates.isFetching}
+          onClick={loadMore}
         >
-          {candidates.isFetchingNextPage ? 'Загружаем…' : 'Показать ещё'}
+          {candidates.isFetching ? 'Загружаем…' : 'Показать ещё'}
         </Button>
       )}
     </section>
