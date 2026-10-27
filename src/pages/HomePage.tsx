@@ -26,6 +26,9 @@ export function HomePage() {
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Лента</h1>
         <nav className="flex items-center gap-3 text-sm">
+          <Link to="/matches" className="underline underline-offset-4">
+            Мэтчи
+          </Link>
           <Link to="/profile" className="underline underline-offset-4">
             Профиль
           </Link>

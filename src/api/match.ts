@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { candidatesKey, removeCandidate } from '@/api/candidates';
 import { apiRequest } from '@/api/client';
+import { matchesKey } from '@/api/matches';
 import type { Candidate } from '@/types/candidate';
 
 export type LikeResult =
@@ -22,6 +23,11 @@ export function useLike() {
       const previous = queryClient.getQueryData(candidatesKey);
       removeCandidate(queryClient, candidate._id);
       return { previous };
+    },
+    onSuccess: (result) => {
+      if (result.matched) {
+        void queryClient.invalidateQueries({ queryKey: matchesKey });
+      }
     },
     onError: (_error, _candidate, context) => {
       if (context?.previous) {

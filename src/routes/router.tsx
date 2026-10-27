@@ -4,6 +4,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { HomePage } from '@/pages/HomePage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { ChatPage } from '@/pages/ChatPage';
+import { MatchesPage } from '@/pages/MatchesPage';
 
 export const router = createBrowserRouter([
   {
@@ -15,6 +16,7 @@ export const router = createBrowserRouter([
     children: [
       { path: '/', element: <HomePage /> },
       { path: '/profile', element: <ProfilePage /> },
+      { path: '/matches', element: <MatchesPage /> },
       { path: '/chat/:dialogId', element: <ChatPage /> },
     ],
   },
