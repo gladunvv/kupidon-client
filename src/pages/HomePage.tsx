@@ -29,6 +29,9 @@ export function HomePage() {
           <Link to="/matches" className="underline underline-offset-4">
             Мэтчи
           </Link>
+          <Link to="/chats" className="underline underline-offset-4">
+            Сообщения
+          </Link>
           <Link to="/profile" className="underline underline-offset-4">
             Профиль
           </Link>
