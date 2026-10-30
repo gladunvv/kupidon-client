@@ -14,14 +14,21 @@ const MESSAGES: Record<string, string> = {
   INVALID_PHOTOS: 'Фото изменились в другом окне — список обновлён',
   OTP_ATTEMPTS_EXCEEDED:
     'Слишком много неверных попыток. Запросите новый код позже',
+  TOO_MANY_MESSAGES: 'Слишком часто — подождите несколько секунд',
+  NOT_FOUND: 'Диалог недоступен',
+  DIALOG_NOT_FOUND: 'Диалог недоступен',
   BAD_REQUEST: 'Проверьте введённые данные',
   VALIDATION_ERROR: 'Проверьте введённые данные',
   INTERNAL_SERVER_ERROR: 'Сервер временно недоступен. Попробуйте позже',
 };
 
+export function messageForCode(code: string): string {
+  return MESSAGES[code] ?? 'Что-то пошло не так. Попробуйте ещё раз';
+}
+
 export function getErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    return MESSAGES[error.code] ?? 'Что-то пошло не так. Попробуйте ещё раз';
+    return messageForCode(error.code);
   }
   return 'Нет соединения с сервером. Проверьте интернет';
 }
