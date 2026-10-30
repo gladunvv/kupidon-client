@@ -3,11 +3,20 @@ import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router';
 import './index.css';
-import { refreshSession } from '@/api/client';
+import { ApiError, refreshSession } from '@/api/client';
 import { getSession, subscribeSession } from '@/auth/session-store';
 import { router } from '@/routes/router';
 
-const queryClient = new QueryClient();
+// A 4xx (not found, forbidden, validation) won't change on retry — fail fast
+// instead of three backed-off attempts; network errors and 5xx still retry.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) =>
+        !(error instanceof ApiError && error.status < 500) && failureCount < 3,
+    },
+  },
+});
 
 subscribeSession(() => {
   if (getSession().status === 'unauthenticated') {
