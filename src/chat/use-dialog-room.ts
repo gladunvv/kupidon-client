@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { messageForCode } from '@/api/error-messages';
-import { appendMessage } from '@/api/messages';
+import {
+  appendMessage,
+  messagesKey,
+  resyncMessages,
+  type ChatMessage,
+} from '@/api/messages';
 import {
   addPending,
   confirmEcho,
@@ -41,8 +46,32 @@ export function useDialogRoom(dialogId: string, myId: string) {
     // Rooms don't survive a reconnect on the server, so join on every
     // `connect`, not just once.
     const join = () => socket.emit('join_dialog', { dialogId });
+    // After every join — first open included, since a message can land
+    // between the history fetch and the join — catch up on what the socket
+    // didn't deliver. Only messages new to this client may settle a pending
+    // send: an identical older text from history must not.
     const onJoined = (data: { dialogId: string }) => {
-      if (data.dialogId === dialogId) setRoomError(null);
+      if (data.dialogId !== dialogId) return;
+      setRoomError(null);
+      const known = new Set(
+        queryClient
+          .getQueryData<{ messages: ChatMessage[] }>(messagesKey(dialogId))
+          ?.messages.map((m) => m._id),
+      );
+      resyncMessages(queryClient, dialogId)
+        .then((fetched) => {
+          const mineNew = fetched.filter(
+            (m) => m.sender._id === myId && !known.has(m._id),
+          );
+          if (mineNew.length > 0) {
+            setPending((list) =>
+              mineNew.reduce((acc, m) => confirmEcho(acc, m.text), list),
+            );
+          }
+        })
+        // A failed catch-up is retried on the next join; the history query
+        // shows its own error if loading is broken altogether.
+        .catch(() => undefined);
     };
     const onMessage = (payload: NewMessagePayload) => {
       if (payload.dialogId !== dialogId) return;
