@@ -1,4 +1,9 @@
-import { useQuery, type QueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { apiRequest } from '@/api/client';
 
 export interface ChatMessage {
@@ -34,13 +39,44 @@ export function useDialogDetails(dialogId: string) {
   });
 }
 
-// Latest page only; older history arrives with cursor paging (CHAT-05).
 // Messages within a page come oldest → newest.
 export function useMessages(dialogId: string) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: messagesKey(dialogId),
-    queryFn: () =>
-      apiRequest<MessagesPage>(`/dialogs/${dialogId}/messages?limit=30`),
+    queryFn: async ({ signal }) => {
+      const page = await fetchRecentMessages(queryClient, dialogId, signal);
+      // Read after fetching: pagination or socket events may have added rows.
+      return mergeHistory(
+        queryClient.getQueryData<MessagesPage>(messagesKey(dialogId)),
+        page,
+      );
+    },
+  });
+}
+
+export function useOlderMessages(dialogId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ['older-messages', dialogId],
+    mutationFn: (before: string) =>
+      apiRequest<MessagesPage>(
+        `/dialogs/${dialogId}/messages?limit=30&before=${encodeURIComponent(before)}`,
+      ),
+    onSuccess: (page, before) => {
+      queryClient.setQueryData<MessagesPage>(
+        messagesKey(dialogId),
+        (current) => {
+          // Ignore stale responses after logout or another page advancing the cursor.
+          if (!current || current.pagination.nextCursor !== before)
+            return current;
+          return {
+            messages: mergeMessages(current.messages, page.messages),
+            pagination: page.pagination,
+          };
+        },
+      );
+    },
   });
 }
 
@@ -55,45 +91,66 @@ export function mergeMessages(
   return [...byId.values()].sort((a, b) => (a._id < b._id ? -1 : 1));
 }
 
-const MAX_RESYNC_PAGES = 5;
+function mergeHistory(
+  current: MessagesPage | undefined,
+  page: MessagesPage,
+): MessagesPage {
+  if (!current) return page;
+  return {
+    messages: mergeMessages(current.messages, page.messages),
+    pagination:
+      current.messages.length &&
+      (!page.messages.length || current.messages[0]._id < page.messages[0]._id)
+        ? current.pagination
+        : page.pagination,
+  };
+}
 
 // The api doesn't replay what a socket missed while disconnected (by design,
 // see its README), so after every join the latest messages are fetched and
 // merged. If the gap is longer than a page, older pages are fetched until a
 // known message shows up, so no hole is left in the middle of the thread.
-export async function resyncMessages(
+async function fetchRecentMessages(
   queryClient: QueryClient,
   dialogId: string,
-): Promise<ChatMessage[]> {
+  signal?: AbortSignal,
+): Promise<MessagesPage> {
   const cached = queryClient.getQueryData<MessagesPage>(messagesKey(dialogId));
   const known = new Set(cached?.messages.map((m) => m._id));
   const fetched: ChatMessage[] = [];
   let page = await apiRequest<MessagesPage>(
     `/dialogs/${dialogId}/messages?limit=30`,
+    { signal },
   );
-  const latestPagination = page.pagination;
   fetched.push(...page.messages);
-  for (
-    let i = 1;
+  while (
     cached &&
     known.size > 0 &&
-    i < MAX_RESYNC_PAGES &&
     page.pagination.hasMore &&
     page.pagination.nextCursor &&
-    !page.messages.some((m) => known.has(m._id));
-    i++
+    !page.messages.some((m) => known.has(m._id))
   ) {
     page = await apiRequest<MessagesPage>(
       `/dialogs/${dialogId}/messages?limit=30&before=${page.pagination.nextCursor}`,
+      { signal },
     );
     fetched.push(...page.messages);
   }
-  queryClient.setQueryData<MessagesPage>(messagesKey(dialogId), (current) =>
-    current
-      ? { ...current, messages: mergeMessages(current.messages, fetched) }
-      : { messages: mergeMessages([], fetched), pagination: latestPagination },
-  );
-  return fetched;
+  return { messages: mergeMessages([], fetched), pagination: page.pagination };
+}
+
+export async function resyncMessages(
+  queryClient: QueryClient,
+  dialogId: string,
+): Promise<ChatMessage[]> {
+  const page = await fetchRecentMessages(queryClient, dialogId);
+  // The initial history request can still be in flight. Seed its cache so
+  // messages fetched after joining aren't lost; a cleared query stays cleared.
+  if (!queryClient.getQueryState(messagesKey(dialogId))) return page.messages;
+  queryClient.setQueryData<MessagesPage>(messagesKey(dialogId), (current) => {
+    return mergeHistory(current, page);
+  });
+  return page.messages;
 }
 
 // The same message can arrive from both history and the socket broadcast.

@@ -4,6 +4,7 @@ import { getErrorMessage } from '@/api/error-messages';
 import {
   useDialogDetails,
   useMessages,
+  useOlderMessages,
   type ChatMessage,
 } from '@/api/messages';
 import { useAuth } from '@/auth/use-auth';
@@ -12,6 +13,7 @@ import type { PendingMessage } from '@/chat/pending';
 import { markSeen } from '@/chat/seen-store';
 import { retryChatSocket, type SocketStatus } from '@/chat/socket';
 import { MAX_MESSAGE_LENGTH, useDialogRoom } from '@/chat/use-dialog-room';
+import { useMessageScroll } from '@/chat/use-message-scroll';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -22,8 +24,13 @@ export function ChatPage() {
   const myId = user?._id ?? '';
   const details = useDialogDetails(dialogId);
   const history = useMessages(dialogId);
+  const older = useOlderMessages(dialogId);
   const room = useDialogRoom(dialogId, myId);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLDivElement>(null);
+  const { containerRef, rememberPosition, followBottom } = useMessageScroll(
+    dialogId,
+    Boolean(history.data),
+  );
 
   const messages = history.data?.messages ?? [];
   const lastMessage = messages.at(-1);
@@ -35,9 +42,34 @@ export function ChatPage() {
     }
   }, [myId, dialogId, lastMessage]);
 
+  const cursor = history.data?.pagination.nextCursor;
+  const hasMore = history.data?.pagination.hasMore;
+  const {
+    mutate: loadOlder,
+    isPending: loadingOlder,
+    isError: olderFailed,
+  } = older;
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: 'end' });
-  }, [messages.length, room.pending.length]);
+    const container = containerRef.current;
+    const top = topRef.current;
+    if (
+      !container ||
+      !top ||
+      !hasMore ||
+      !cursor ||
+      loadingOlder ||
+      olderFailed
+    )
+      return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) loadOlder(cursor);
+      },
+      { root: container, rootMargin: '80px 0px 0px 0px' },
+    );
+    observer.observe(top);
+    return () => observer.disconnect();
+  }, [containerRef, hasMore, cursor, loadingOlder, olderFailed, loadOlder]);
 
   const partner = details.data?.partner;
 
@@ -65,9 +97,34 @@ export function ChatPage() {
       </header>
 
       <section
+        ref={containerRef}
+        onScroll={rememberPosition}
         aria-label="Сообщения"
-        className="flex flex-1 flex-col gap-2 overflow-y-auto py-3"
+        className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto py-3 [overflow-anchor:none]"
       >
+        <div ref={topRef} className="h-px shrink-0" />
+        {loadingOlder && (
+          <p
+            role="status"
+            className="text-center text-sm text-muted-foreground"
+          >
+            Загружаем сообщения…
+          </p>
+        )}
+        {olderFailed && (
+          <div className="flex flex-col items-center gap-2">
+            <p role="alert" className="text-sm text-destructive">
+              Не удалось загрузить сообщения: {getErrorMessage(older.error)}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => cursor && loadOlder(cursor)}
+            >
+              Повторить
+            </Button>
+          </div>
+        )}
         {history.isPending && (
           <p className="text-sm text-muted-foreground">Загружаем переписку…</p>
         )}
@@ -105,7 +162,6 @@ export function ChatPage() {
             onDiscard={() => room.discard(item.tempId)}
           />
         ))}
-        <div ref={bottomRef} />
       </section>
 
       {room.roomError && (
@@ -115,7 +171,11 @@ export function ChatPage() {
       )}
       <Composer
         disabled={room.status !== 'connected' || Boolean(room.roomError)}
-        onSend={room.send}
+        onSend={(text) => {
+          const sent = room.send(text);
+          if (sent) followBottom();
+          return sent;
+        }}
       />
     </main>
   );
@@ -123,7 +183,13 @@ export function ChatPage() {
 
 function Bubble({ message, mine }: { message: ChatMessage; mine: boolean }) {
   return (
-    <div className={cn('flex flex-col', mine ? 'items-end' : 'items-start')}>
+    <div
+      data-message-id={message._id}
+      className={cn(
+        'flex shrink-0 flex-col',
+        mine ? 'items-end' : 'items-start',
+      )}
+    >
       <p
         className={cn(
           'max-w-[80%] rounded-2xl px-3 py-2 text-sm break-words whitespace-pre-wrap',
@@ -149,7 +215,7 @@ function PendingBubble({
   onDiscard: () => void;
 }) {
   return (
-    <div className="flex flex-col items-end">
+    <div className="flex shrink-0 flex-col items-end">
       <p
         className={cn(
           'max-w-[80%] rounded-2xl px-3 py-2 text-sm break-words whitespace-pre-wrap',
