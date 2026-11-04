@@ -17,6 +17,8 @@ const MESSAGES: Record<string, string> = {
   TOO_MANY_MESSAGES: 'Слишком часто — подождите несколько секунд',
   NOT_FOUND: 'Диалог недоступен',
   DIALOG_NOT_FOUND: 'Диалог недоступен',
+  USER_NOT_FOUND: 'Пользователь недоступен',
+  CANNOT_TARGET_SELF: 'Это действие недоступно для собственной анкеты',
   BAD_REQUEST: 'Проверьте введённые данные',
   VALIDATION_ERROR: 'Проверьте введённые данные',
   INTERNAL_SERVER_ERROR: 'Сервер временно недоступен. Попробуйте позже',

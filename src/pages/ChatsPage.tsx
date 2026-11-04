@@ -1,4 +1,4 @@
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { type DialogItem, useDialogs } from '@/api/dialogs';
 import { getErrorMessage } from '@/api/error-messages';
 import { useAuth } from '@/auth/use-auth';
@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 
 export function ChatsPage() {
   const dialogs = useDialogs();
+  const location = useLocation();
 
   return (
     <main className="mx-auto flex min-h-svh max-w-sm flex-col gap-4 px-4 py-6">
@@ -16,6 +17,11 @@ export function ChatsPage() {
         ← Лента
       </Link>
       <h1 className="text-2xl font-semibold">Сообщения</h1>
+      {location.state?.blocked === true && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Пользователь заблокирован
+        </p>
+      )}
       {dialogs.isPending && (
         <p className="text-muted-foreground">Загружаем диалоги…</p>
       )}

@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { CandidateCard } from '@/feed/CandidateCard';
 import { FeedFilters } from '@/feed/FeedFilters';
 import { MatchDialog } from '@/feed/MatchDialog';
+import { UserSafetyActions } from '@/safety/UserSafetyActions';
 import type { Candidate } from '@/types/candidate';
 
 export function HomePage() {
@@ -63,6 +64,7 @@ function Feed() {
   const goals = useGoals();
   const passed = usePassedIds();
   const like = useLike();
+  const [blocked, setBlocked] = useState(false);
   const [match, setMatch] = useState<{
     candidate: Candidate;
     dialogId: string;
@@ -125,10 +127,16 @@ function Feed() {
       </Button>
     </div>
   );
+  const blockNotice = blocked && (
+    <p role="status" className="text-sm text-muted-foreground">
+      Пользователь заблокирован
+    </p>
+  );
 
   if (items.length === 0 && !candidates.hasNextPage) {
     return (
       <>
+        {blockNotice}
         {refetchFailed}
         <EmptyFeed />
       </>
@@ -139,6 +147,7 @@ function Feed() {
 
   return (
     <section className="flex flex-col gap-4" aria-label="Анкеты">
+      {blockNotice}
       {refetchFailed}
       {match && (
         <MatchDialog
@@ -166,17 +175,27 @@ function Feed() {
             .map((id) => goalNames.get(id))
             .filter((name): name is string => Boolean(name))}
           actions={
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <Button
-                variant="outline"
-                onClick={() => passCandidate(queryClient, candidate._id)}
-              >
-                Пропустить
-              </Button>
-              <Button onClick={() => likeCandidate(candidate)}>
-                ♥ Нравится
-              </Button>
-            </div>
+            <>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => passCandidate(queryClient, candidate._id)}
+                >
+                  Пропустить
+                </Button>
+                <Button onClick={() => likeCandidate(candidate)}>
+                  ♥ Нравится
+                </Button>
+              </div>
+              <UserSafetyActions
+                userId={candidate._id}
+                name={candidate.name}
+                onBlocked={() => {
+                  shifted.current = true;
+                  setBlocked(true);
+                }}
+              />
+            </>
           }
         />
       ))}

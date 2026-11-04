@@ -143,10 +143,19 @@ export async function resyncMessages(
   queryClient: QueryClient,
   dialogId: string,
 ): Promise<ChatMessage[]> {
+  const query = queryClient
+    .getQueryCache()
+    .find({ queryKey: messagesKey(dialogId), exact: true });
   const page = await fetchRecentMessages(queryClient, dialogId);
   // The initial history request can still be in flight. Seed its cache so
   // messages fetched after joining aren't lost; a cleared query stays cleared.
-  if (!queryClient.getQueryState(messagesKey(dialogId))) return page.messages;
+  if (
+    !query ||
+    queryClient
+      .getQueryCache()
+      .find({ queryKey: messagesKey(dialogId), exact: true }) !== query
+  )
+    return page.messages;
   queryClient.setQueryData<MessagesPage>(messagesKey(dialogId), (current) => {
     return mergeHistory(current, page);
   });
