@@ -160,6 +160,11 @@ export function ChatPage() {
             item={item}
             onRetry={() => room.retry(item.tempId)}
             onDiscard={() => room.discard(item.tempId)}
+            retryDisabled={
+              room.status !== 'connected' ||
+              Boolean(room.roomError) ||
+              room.cooldownSeconds > 0
+            }
           />
         ))}
       </section>
@@ -171,6 +176,8 @@ export function ChatPage() {
       )}
       <Composer
         disabled={room.status !== 'connected' || Boolean(room.roomError)}
+        cooldownSeconds={room.cooldownSeconds}
+        remaining={room.remaining}
         onSend={(text) => {
           const sent = room.send(text);
           if (sent) followBottom();
@@ -209,10 +216,12 @@ function PendingBubble({
   item,
   onRetry,
   onDiscard,
+  retryDisabled,
 }: {
   item: PendingMessage;
   onRetry: () => void;
   onDiscard: () => void;
+  retryDisabled: boolean;
 }) {
   return (
     <div className="flex shrink-0 flex-col items-end">
@@ -236,7 +245,12 @@ function PendingBubble({
           className="flex gap-2 px-1 text-[11px] text-destructive"
         >
           Не отправлено: {item.error}
-          <button type="button" className="underline" onClick={onRetry}>
+          <button
+            type="button"
+            className="underline disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={retryDisabled}
+            onClick={onRetry}
+          >
             Повторить
           </button>
           <button type="button" className="underline" onClick={onDiscard}>
@@ -250,15 +264,21 @@ function PendingBubble({
 
 function Composer({
   disabled,
+  cooldownSeconds,
+  remaining,
   onSend,
 }: {
   disabled: boolean;
+  cooldownSeconds: number;
+  remaining: number;
   onSend: (text: string) => boolean;
 }) {
   const [text, setText] = useState('');
   const tooLong = text.trim().length > MAX_MESSAGE_LENGTH;
+  const blocked = disabled || cooldownSeconds > 0;
 
   function submit() {
+    if (blocked) return;
     if (onSend(text)) setText('');
   }
 
@@ -290,12 +310,33 @@ function Composer({
           onChange={(event) => setText(event.target.value)}
           onKeyDown={handleKeyDown}
           aria-invalid={tooLong ? true : undefined}
+          aria-describedby={
+            cooldownSeconds > 0 || remaining <= 2 ? 'send-limit' : undefined
+          }
           className="max-h-32 min-h-9 resize-none"
         />
-        <Button type="submit" disabled={disabled || !text.trim() || tooLong}>
+        <Button type="submit" disabled={blocked || !text.trim() || tooLong}>
           Отправить
         </Button>
       </div>
+      {cooldownSeconds > 0 ? (
+        <p
+          id="send-limit"
+          role="status"
+          className="text-xs text-muted-foreground"
+        >
+          Следующее сообщение можно отправить через {cooldownSeconds} с
+        </p>
+      ) : remaining <= 2 ? (
+        <p
+          id="send-limit"
+          role="status"
+          className="text-xs text-muted-foreground"
+        >
+          {remaining === 1 ? 'Ещё одно сообщение' : 'Ещё два сообщения'} — затем
+          короткая пауза
+        </p>
+      ) : null}
       {text.length > MAX_MESSAGE_LENGTH - 100 && (
         <span
           className={cn(
