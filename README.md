@@ -28,6 +28,7 @@ Origin клиента должен быть разрешён в CORS API: авт
 ```sh
 npm run format:check
 npm run lint
+npm test
 npm run build
 ```
 

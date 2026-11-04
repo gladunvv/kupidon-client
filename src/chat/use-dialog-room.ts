@@ -15,6 +15,7 @@ import {
   type PendingMessage,
 } from '@/chat/pending';
 import { useChatSocket } from '@/chat/socket';
+import { useSendRateLimit } from '@/chat/use-send-rate-limit';
 
 interface NewMessagePayload {
   _id: string;
@@ -36,6 +37,8 @@ export function useDialogRoom(dialogId: string, myId: string) {
   const queryClient = useQueryClient();
   const [pending, setPending] = useState<PendingMessage[]>([]);
   const [roomError, setRoomError] = useState<string | null>(null);
+  const { remaining, cooldownSeconds, tryConsume, penalize, reset } =
+    useSendRateLimit();
   // Read only in event handlers (socket errors, retry), never during render.
   const pendingRef = useRef(pending);
   useEffect(() => {
@@ -46,6 +49,10 @@ export function useDialogRoom(dialogId: string, myId: string) {
     // Rooms don't survive a reconnect on the server, so join on every
     // `connect`, not just once.
     const join = () => socket.emit('join_dialog', { dialogId });
+    const onConnect = () => {
+      reset();
+      join();
+    };
     // After every join — first open included, since a message can land
     // between the history fetch and the join — catch up on what the socket
     // didn't deliver. Only messages new to this client may settle a pending
@@ -93,33 +100,41 @@ export function useDialogRoom(dialogId: string, myId: string) {
     // attributed to the oldest one, otherwise it concerns the room itself.
     const onError = (error: { code: string }) => {
       const text = messageForCode(error.code);
+      if (error.code === 'TOO_MANY_MESSAGES') {
+        penalize();
+        setPending((list) => failNewest(list, text));
+        return;
+      }
       if (pendingRef.current.some((item) => item.status === 'sending')) {
-        const fail =
-          error.code === 'TOO_MANY_MESSAGES' ? failNewest : failOldest;
-        setPending((list) => fail(list, text));
+        setPending((list) => failOldest(list, text));
       } else {
         setRoomError(text);
       }
     };
 
-    socket.on('connect', join);
+    socket.on('connect', onConnect);
     socket.on('joined_dialog', onJoined);
     socket.on('new_message', onMessage);
     socket.on('chat_error', onError);
     if (socket.connected) join();
     return () => {
-      socket.off('connect', join);
+      socket.off('connect', onConnect);
       socket.off('joined_dialog', onJoined);
       socket.off('new_message', onMessage);
       socket.off('chat_error', onError);
       if (socket.connected) socket.emit('leave_dialog', { dialogId });
     };
-  }, [socket, dialogId, myId, queryClient]);
+  }, [socket, dialogId, myId, queryClient, penalize, reset]);
 
   const send = useCallback(
     (raw: string) => {
       const text = raw.trim();
-      if (!text || text.length > MAX_MESSAGE_LENGTH || !socket.connected) {
+      if (
+        !text ||
+        text.length > MAX_MESSAGE_LENGTH ||
+        !socket.connected ||
+        !tryConsume()
+      ) {
         return false;
       }
       // A counter, not crypto.randomUUID(): that one only exists on HTTPS.
@@ -139,7 +154,7 @@ export function useDialogRoom(dialogId: string, myId: string) {
       }, ECHO_TIMEOUT_MS);
       return true;
     },
-    [socket, dialogId],
+    [socket, dialogId, tryConsume],
   );
 
   const discard = useCallback((tempId: string) => {
@@ -150,11 +165,19 @@ export function useDialogRoom(dialogId: string, myId: string) {
     (tempId: string) => {
       const item = pendingRef.current.find((p) => p.tempId === tempId);
       if (!item) return;
-      discard(tempId);
-      send(item.text);
+      if (send(item.text)) discard(tempId);
     },
     [discard, send],
   );
 
-  return { status, pending, roomError, send, retry, discard };
+  return {
+    status,
+    pending,
+    roomError,
+    remaining,
+    cooldownSeconds,
+    send,
+    retry,
+    discard,
+  };
 }
