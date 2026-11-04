@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { getErrorMessage } from '@/api/error-messages';
 import {
   useDialogDetails,
@@ -17,9 +17,11 @@ import { useMessageScroll } from '@/chat/use-message-scroll';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { UserSafetyActions } from '@/safety/UserSafetyActions';
 
 export function ChatPage() {
   const { dialogId = '' } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const myId = user?._id ?? '';
   const details = useDialogDetails(dialogId);
@@ -94,6 +96,17 @@ export function ChatPage() {
           </span>
           <ConnectionStatus status={room.status} />
         </div>
+        {partner && (
+          <UserSafetyActions
+            compact
+            userId={partner._id}
+            name={partner.name}
+            dialogId={dialogId}
+            onBlocked={() =>
+              navigate('/chats', { replace: true, state: { blocked: true } })
+            }
+          />
+        )}
       </header>
 
       <section
