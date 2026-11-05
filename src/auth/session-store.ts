@@ -1,7 +1,7 @@
 import type { AuthResponse } from '@/types/auth';
 import type { User } from '@/types/user';
 
-export type SignOutReason = 'session-replaced';
+export type SignOutReason = 'session-replaced' | 'account-deleted';
 
 export type Session =
   | { status: 'loading' }
