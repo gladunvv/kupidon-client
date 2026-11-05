@@ -166,15 +166,20 @@ function withRefreshLock(fn: () => Promise<boolean>): Promise<boolean> {
 }
 
 async function doRefresh(): Promise<boolean> {
+  const session = getSession();
   try {
     const body = await send<AuthResponse>(
       '/auth/refresh-token',
       { method: 'POST' },
       null,
     );
+    // A response started before sign-out must not restore that session or
+    // overwrite an account signed in while the request was in flight.
+    if (getSession() !== session) return false;
     signIn(body.data);
     return true;
   } catch (error) {
+    if (getSession() !== session) return false;
     const rejected = error instanceof ApiError && error.status === 401;
     if (rejected || getSession().status === 'loading') {
       signOut(

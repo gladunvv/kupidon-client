@@ -6,6 +6,7 @@ import { useProfile, useUpdateProfile } from '@/api/users';
 import { ChipGroup } from '@/profile/ChipGroup';
 import { CityPicker } from '@/profile/CityPicker';
 import { PhotosSection } from '@/profile/PhotosSection';
+import { DeleteAccountSection } from '@/profile/DeleteAccountSection';
 import {
   buildProfilePayload,
   selectLifestyleOption,
@@ -45,6 +46,7 @@ export function ProfilePage() {
       )}
       {profile.data && <PhotosSection photos={profile.data.photos} />}
       {profile.data && <ProfileForm profile={profile.data} />}
+      <DeleteAccountSection />
     </main>
   );
 }

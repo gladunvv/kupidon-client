@@ -27,6 +27,14 @@ export function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 px-4">
+      {signOutReason === 'account-deleted' && (
+        <p
+          role="status"
+          className="rounded-lg border border-border bg-muted px-3 py-2 text-sm"
+        >
+          Аккаунт удалён
+        </p>
+      )}
       {signOutReason === 'session-replaced' && (
         <p
           role="status"

@@ -4,6 +4,10 @@ import type { Profile, UpdateProfilePayload } from '@/types/user';
 
 const profileKey = ['profile'] as const;
 
+export function deleteAccount(): Promise<null> {
+  return apiRequest<null>('/users', { method: 'DELETE' });
+}
+
 export function useProfile() {
   return useQuery({
     queryKey: profileKey,
