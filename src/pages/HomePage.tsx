@@ -120,7 +120,7 @@ function Feed() {
   const refetchFailed = candidates.isRefetchError && (
     <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/40 px-3 py-2">
       <p role="alert" className="text-sm text-destructive">
-        Не удалось обновить анкеты
+        Не удалось обновить анкеты: {getErrorMessage(candidates.error)}
       </p>
       <Button size="sm" variant="outline" onClick={() => candidates.refetch()}>
         Повторить
