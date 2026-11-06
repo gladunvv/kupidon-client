@@ -127,7 +127,8 @@ export function ChatPage() {
         {olderFailed && (
           <div className="flex flex-col items-center gap-2">
             <p role="alert" className="text-sm text-destructive">
-              Не удалось загрузить сообщения: {getErrorMessage(older.error)}
+              Не удалось загрузить сообщения:{' '}
+              {getErrorMessage(older.error, 'chat')}
             </p>
             <Button
               variant="outline"
@@ -144,7 +145,8 @@ export function ChatPage() {
         {history.isError && (
           <div className="flex flex-col gap-2">
             <p role="alert" className="text-sm text-destructive">
-              Не удалось загрузить переписку: {getErrorMessage(history.error)}
+              Не удалось загрузить переписку:{' '}
+              {getErrorMessage(history.error, 'chat')}
             </p>
             <Button
               variant="outline"

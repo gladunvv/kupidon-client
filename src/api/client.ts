@@ -5,66 +5,40 @@ import {
   signIn,
   signOut,
 } from '@/auth/session-store';
-import type {
-  ApiResponse,
-  PaginationMeta,
-  SuccessApiResponse,
-} from '@/types/api';
+import { ApiError, NetworkError } from '@/api/errors';
+import { parseApiResponse } from '@/api/response';
+import type { PaginationMeta, SuccessApiResponse } from '@/types/api';
 import type { AuthResponse } from '@/types/auth';
 
-export class ApiError extends Error {
-  readonly code: string;
-  readonly status: number;
-  readonly requestId: string | undefined;
-  readonly details: unknown;
-
-  constructor(
-    message: string,
-    code: string,
-    status: number,
-    requestId: string | undefined,
-    details: unknown = undefined,
-  ) {
-    super(message);
-    this.name = 'ApiError';
-    this.code = code;
-    this.status = status;
-    this.requestId = requestId;
-    this.details = details;
-  }
-}
-
-function unwrap<T>(
-  body: ApiResponse<T>,
-  status: number,
-): SuccessApiResponse<T> {
-  if (!body.success) {
-    throw new ApiError(
-      body.message,
-      body.error.code,
-      status,
-      body.meta?.requestId,
-      body.error.details,
-    );
-  }
-  return body;
-}
+export { ApiError } from '@/api/errors';
 
 async function send<T>(
   path: string,
   init: RequestInit,
   accessToken: string | null,
 ): Promise<SuccessApiResponse<T>> {
-  const response = await fetch(`${env.apiUrl}${path}`, {
-    ...init,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...init.headers,
-    },
-  });
-  return unwrap((await response.json()) as ApiResponse<T>, response.status);
+  let response: Response;
+  let text: string;
+  try {
+    response = await fetch(`${env.apiUrl}${path}`, {
+      ...init,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        ...init.headers,
+      },
+    });
+    text = await response.text();
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') throw error;
+    throw new NetworkError(error);
+  }
+  return parseApiResponse<T>(
+    text,
+    response.status,
+    response.headers.get('X-Request-Id') ?? undefined,
+  );
 }
 
 // XHR instead of fetch: fetch exposes no upload progress. Content-Type is
@@ -88,14 +62,21 @@ function sendWithProgress<T>(
     xhr.onload = () => {
       try {
         resolve(
-          unwrap(JSON.parse(xhr.responseText) as ApiResponse<T>, xhr.status)
-            .data,
+          parseApiResponse<T>(
+            xhr.responseText,
+            xhr.status,
+            xhr.getResponseHeader('X-Request-Id') ?? undefined,
+          ).data,
         );
       } catch (error) {
         reject(error);
       }
     };
-    xhr.onerror = () => reject(new TypeError('Network request failed'));
+    xhr.onerror = () => reject(new NetworkError());
+    xhr.ontimeout = () =>
+      reject(new NetworkError(new Error('Upload timed out')));
+    xhr.onabort = () =>
+      reject(new DOMException('Upload aborted', 'AbortError'));
     xhr.send(body);
   });
 }
@@ -131,7 +112,12 @@ export interface Page<T> {
 export async function apiRequestPage<T>(path: string): Promise<Page<T>> {
   const body = await withAuthRetry((token) => send<T[]>(path, {}, token));
   if (!body.meta?.pagination) {
-    throw new Error(`Expected meta.pagination in response for ${path}`);
+    throw new ApiError(
+      `Expected meta.pagination in response for ${path}`,
+      'INVALID_RESPONSE',
+      200,
+      body.meta?.requestId,
+    );
   }
   return { items: body.data, pagination: body.meta.pagination };
 }

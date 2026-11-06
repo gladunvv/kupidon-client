@@ -63,7 +63,7 @@ function DialogList({ query }: { query: ReturnType<typeof useDialogs> }) {
     <>
       {query.isRefetchError && (
         <p role="alert" className="text-sm text-destructive">
-          Не удалось обновить список
+          Не удалось обновить список: {getErrorMessage(query.error)}
         </p>
       )}
       <ul className="flex flex-col divide-y divide-border">

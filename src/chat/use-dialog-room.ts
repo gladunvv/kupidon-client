@@ -99,7 +99,7 @@ export function useDialogRoom(dialogId: string, myId: string) {
     // chat_error carries no request context: with a send in flight it's
     // attributed to the oldest one, otherwise it concerns the room itself.
     const onError = (error: { code: string }) => {
-      const text = messageForCode(error.code);
+      const text = messageForCode(error.code, 'chat');
       if (error.code === 'TOO_MANY_MESSAGES') {
         penalize();
         setPending((list) => failNewest(list, text));

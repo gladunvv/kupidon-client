@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Navigate, useLocation } from 'react-router';
 import { requestOtp, verifyOtp } from '@/api/auth';
-import { ApiError } from '@/api/client';
 import { getErrorMessage } from '@/api/error-messages';
 import { signIn } from '@/auth/session-store';
 import { useAuth } from '@/auth/use-auth';
@@ -84,9 +83,7 @@ function PhoneStep({
   }
 
   const serverError =
-    mutation.error instanceof ApiError && mutation.error.code === 'BAD_REQUEST'
-      ? 'Сервер не принял номер. Проверьте его'
-      : mutation.error && getErrorMessage(mutation.error);
+    mutation.error && getErrorMessage(mutation.error, 'phone');
   const error = inputError ?? serverError;
 
   return (
