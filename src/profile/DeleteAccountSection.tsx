@@ -8,6 +8,7 @@ import { getErrorMessage } from '@/api/error-messages';
 import { deleteAccount } from '@/api/users';
 import { signOut } from '@/auth/session-store';
 import { Button } from '@/components/ui/button';
+import { useDialogViewport } from '@/lib/use-visual-viewport';
 
 export function DeleteAccountSection() {
   const [open, setOpen] = useState(false);
@@ -37,6 +38,7 @@ export function DeleteAccountSection() {
 function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   const submitted = useRef(false);
+  const viewportStyle = useDialogViewport();
   const titleId = useId();
   const descriptionId = useId();
   const queryClient = useQueryClient();
@@ -61,6 +63,7 @@ function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
   return (
     <dialog
       ref={ref}
+      style={viewportStyle}
       onClose={onClose}
       onCancel={(event) => {
         if (mutation.isPending) event.preventDefault();

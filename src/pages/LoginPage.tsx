@@ -10,10 +10,12 @@ import { getReturnPath } from '@/routes/return-path';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useVisualViewport } from '@/lib/use-visual-viewport';
 
 export function LoginPage() {
   const { status, signOutReason } = useAuth();
   const location = useLocation();
+  const viewport = useVisualViewport();
   const [phoneInput, setPhoneInput] = useState('');
   const [sentTo, setSentTo] = useState<string | null>(null);
 
@@ -25,7 +27,10 @@ export function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 px-4">
+    <main
+      style={{ minHeight: viewport.height }}
+      className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-4 py-6"
+    >
       {signOutReason === 'account-deleted' && (
         <p
           role="status"

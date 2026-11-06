@@ -123,8 +123,25 @@
   }
   body {
     @apply bg-background text-foreground;
+    overflow-wrap: anywhere;
   }
   html {
     @apply font-sans;
+  }
+}
+
+@media (pointer: coarse) {
+  button,
+  [data-slot='input'],
+  [data-slot='textarea'],
+  select {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+
+  [data-slot='input'],
+  [data-slot='textarea'],
+  select {
+    font-size: 1rem;
   }
 }

@@ -13,7 +13,10 @@ export function ChatsPage() {
 
   return (
     <main className="mx-auto flex min-h-svh max-w-sm flex-col gap-4 px-4 py-6">
-      <Link to="/" className="text-sm text-muted-foreground">
+      <Link
+        to="/"
+        className="inline-flex min-h-11 items-center text-sm text-muted-foreground"
+      >
         ← Лента
       </Link>
       <h1 className="text-2xl font-semibold">Сообщения</h1>
@@ -52,7 +55,10 @@ function DialogList({ query }: { query: ReturnType<typeof useDialogs> }) {
         <p className="text-sm text-muted-foreground">
           Диалог появляется, когда симпатия взаимна.
         </p>
-        <Link to="/" className="text-sm underline underline-offset-4">
+        <Link
+          to="/"
+          className="inline-flex min-h-11 items-center justify-center text-sm underline underline-offset-4"
+        >
           В ленту
         </Link>
       </div>

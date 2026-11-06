@@ -67,7 +67,7 @@ export function PhotosSection({ photos }: { photos: string[] }) {
       {photos.length > 0 && (
         <ul className="grid grid-cols-2 gap-3">
           {photos.map((url, index) => (
-            <li key={url} className="flex flex-col gap-1.5">
+            <li key={url} className="flex min-w-0 flex-col gap-1.5">
               <div className="relative">
                 <img
                   src={url}
@@ -81,9 +81,9 @@ export function PhotosSection({ photos }: { photos: string[] }) {
                 )}
               </div>
               {confirmDelete === url ? (
-                <div className="flex items-center justify-between gap-2 text-sm">
+                <div className="flex flex-col gap-1.5 text-sm">
                   <span>Удалить?</span>
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1">
                     <Button
                       type="button"
                       size="sm"
@@ -109,11 +109,12 @@ export function PhotosSection({ photos }: { photos: string[] }) {
                   </div>
                 </div>
               ) : (
-                <div className="flex justify-between">
-                  <div className="flex gap-1">
+                <div className="grid grid-cols-2 gap-1">
+                  <div className="contents">
                     <Button
                       type="button"
                       size="icon-sm"
+                      className="w-full"
                       variant="outline"
                       aria-label={`Сдвинуть фото ${index + 1} влево`}
                       disabled={busy || index === 0}
@@ -126,6 +127,7 @@ export function PhotosSection({ photos }: { photos: string[] }) {
                     <Button
                       type="button"
                       size="icon-sm"
+                      className="w-full"
                       variant="outline"
                       aria-label={`Сдвинуть фото ${index + 1} вправо`}
                       disabled={busy || index === photos.length - 1}
@@ -139,6 +141,7 @@ export function PhotosSection({ photos }: { photos: string[] }) {
                       <Button
                         type="button"
                         size="icon-sm"
+                        className="w-full"
                         variant="outline"
                         aria-label={`Сделать фото ${index + 1} главным`}
                         disabled={busy}
@@ -153,6 +156,7 @@ export function PhotosSection({ photos }: { photos: string[] }) {
                   <Button
                     type="button"
                     size="icon-sm"
+                    className="w-full"
                     variant="outline"
                     aria-label={`Удалить фото ${index + 1}`}
                     disabled={busy}

@@ -24,16 +24,28 @@ export function HomePage() {
 
   return (
     <main className="mx-auto flex min-h-svh max-w-sm flex-col gap-4 px-4 py-6">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">Лента</h1>
-        <nav className="flex items-center gap-3 text-sm">
-          <Link to="/matches" className="underline underline-offset-4">
+        <nav
+          aria-label="Основная навигация"
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
+        >
+          <Link
+            to="/matches"
+            className="inline-flex min-h-11 items-center underline underline-offset-4"
+          >
             Мэтчи
           </Link>
-          <Link to="/chats" className="underline underline-offset-4">
+          <Link
+            to="/chats"
+            className="inline-flex min-h-11 items-center underline underline-offset-4"
+          >
             Сообщения
           </Link>
-          <Link to="/profile" className="underline underline-offset-4">
+          <Link
+            to="/profile"
+            className="inline-flex min-h-11 items-center underline underline-offset-4"
+          >
             Профиль
           </Link>
           <Button

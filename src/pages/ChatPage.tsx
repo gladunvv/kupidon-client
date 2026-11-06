@@ -14,6 +14,7 @@ import { markSeen } from '@/chat/seen-store';
 import { retryChatSocket, type SocketStatus } from '@/chat/socket';
 import { MAX_MESSAGE_LENGTH, useDialogRoom } from '@/chat/use-dialog-room';
 import { useMessageScroll } from '@/chat/use-message-scroll';
+import { useVisualViewport } from '@/lib/use-visual-viewport';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,7 @@ import { UserSafetyActions } from '@/safety/UserSafetyActions';
 export function ChatPage() {
   const { dialogId = '' } = useParams();
   const navigate = useNavigate();
+  const viewport = useVisualViewport();
   const { user } = useAuth();
   const myId = user?._id ?? '';
   const details = useDialogDetails(dialogId);
@@ -76,21 +78,31 @@ export function ChatPage() {
   const partner = details.data?.partner;
 
   return (
-    <main className="mx-auto flex h-svh max-w-sm flex-col px-4">
-      <header className="flex items-center gap-3 border-b border-border py-3">
-        <Link to="/chats" className="text-sm text-muted-foreground">
+    <main
+      style={{
+        height: viewport.height,
+        transform: viewport.top ? `translateY(${viewport.top}px)` : undefined,
+      }}
+      className="mx-auto flex h-dvh max-w-sm flex-col px-4"
+    >
+      <header className="flex shrink-0 items-center gap-3 border-b border-border py-3">
+        <Link
+          to="/chats"
+          aria-label="К списку диалогов"
+          className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center text-sm text-muted-foreground"
+        >
           ←
         </Link>
         {partner?.photos?.[0] ? (
           <img
             src={partner.photos[0]}
             alt=""
-            className="size-9 rounded-full object-cover"
+            className="size-9 shrink-0 rounded-full object-cover"
           />
         ) : (
-          <div className="size-9 rounded-full bg-muted" />
+          <div className="size-9 shrink-0 rounded-full bg-muted" />
         )}
-        <div className="flex min-w-0 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-medium">
             {partner?.name ?? (details.isPending ? '…' : 'Собеседник')}
           </span>
@@ -257,7 +269,7 @@ function PendingBubble({
       ) : (
         <span
           role="alert"
-          className="flex gap-2 px-1 text-[11px] text-destructive"
+          className="flex flex-wrap items-center gap-2 px-1 text-[11px] text-destructive"
         >
           Не отправлено: {item.error}
           <button
@@ -310,7 +322,7 @@ function Composer({
 
   return (
     <form
-      className="flex flex-col gap-1 border-t border-border py-3"
+      className="flex shrink-0 flex-col gap-1 border-t border-border py-3"
       onSubmit={(event) => {
         event.preventDefault();
         submit();
@@ -328,7 +340,7 @@ function Composer({
           aria-describedby={
             cooldownSeconds > 0 || remaining <= 2 ? 'send-limit' : undefined
           }
-          className="max-h-32 min-h-9 resize-none"
+          className="max-h-32 min-h-9 min-w-0 flex-1 resize-none"
         />
         <Button type="submit" disabled={blocked || !text.trim() || tooLong}>
           Отправить

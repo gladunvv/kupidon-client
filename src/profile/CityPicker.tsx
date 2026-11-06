@@ -24,10 +24,10 @@ export function CityPicker({
   if (!open && value) {
     return (
       <div className="flex items-center justify-between gap-3 rounded-lg border border-input px-2.5 py-1.5 text-sm">
-        <span>{value.fullName ?? value.name}</span>
+        <span className="min-w-0 flex-1">{value.fullName ?? value.name}</span>
         <button
           type="button"
-          className="text-muted-foreground underline underline-offset-4"
+          className="shrink-0 text-muted-foreground underline underline-offset-4"
           onClick={() => setOpen(true)}
         >
           Изменить

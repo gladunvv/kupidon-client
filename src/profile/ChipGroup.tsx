@@ -22,7 +22,7 @@ export function ChipGroup({
             aria-pressed={active}
             onClick={() => onToggle(item.id)}
             className={cn(
-              'rounded-full border px-3 py-1 text-sm transition-colors',
+              'max-w-full rounded-full border px-3 py-1 text-sm transition-colors',
               active
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-input hover:bg-muted',

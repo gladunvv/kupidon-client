@@ -27,7 +27,10 @@ export function ProfilePage() {
 
   return (
     <main className="mx-auto flex min-h-svh max-w-sm flex-col gap-6 px-4 py-8">
-      <Link to="/" className="text-sm text-muted-foreground">
+      <Link
+        to="/"
+        className="inline-flex min-h-11 items-center text-sm text-muted-foreground"
+      >
         ← Лента
       </Link>
       <h1 className="text-2xl font-semibold">Профиль</h1>
