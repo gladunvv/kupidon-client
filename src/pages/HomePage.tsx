@@ -1,12 +1,9 @@
 import { useRef, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router';
-import { logout } from '@/api/auth';
+import { useQueryClient } from '@tanstack/react-query';
 import { passCandidate, useCandidates, usePassedIds } from '@/api/candidates';
 import { getErrorMessage } from '@/api/error-messages';
 import { useLike } from '@/api/match';
 import { useCityNames, useGoals } from '@/api/reference';
-import { signOut } from '@/auth/session-store';
 import { Button } from '@/components/ui/button';
 import { CandidateCard } from '@/feed/CandidateCard';
 import { FeedFilters } from '@/feed/FeedFilters';
@@ -15,54 +12,15 @@ import { UserSafetyActions } from '@/safety/UserSafetyActions';
 import type { Candidate } from '@/types/candidate';
 
 export function HomePage() {
-  // Local session is dropped only after the server confirms: if the request
-  // fails, the refresh cookie is still valid and a reload would sign back in.
-  const logoutMutation = useMutation({
-    mutationFn: logout,
-    onSuccess: () => signOut(),
-  });
-
   return (
-    <main className="mx-auto flex min-h-svh max-w-sm flex-col gap-4 px-4 py-6">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold">Лента</h1>
-        <nav
-          aria-label="Основная навигация"
-          className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
-        >
-          <Link
-            to="/matches"
-            className="inline-flex min-h-11 items-center underline underline-offset-4"
-          >
-            Мэтчи
-          </Link>
-          <Link
-            to="/chats"
-            className="inline-flex min-h-11 items-center underline underline-offset-4"
-          >
-            Сообщения
-          </Link>
-          <Link
-            to="/profile"
-            className="inline-flex min-h-11 items-center underline underline-offset-4"
-          >
-            Профиль
-          </Link>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isPending}
-          >
-            {logoutMutation.isPending ? 'Выходим…' : 'Выйти'}
-          </Button>
-        </nav>
-      </header>
-      {logoutMutation.error && (
-        <p role="alert" className="text-sm text-destructive">
-          Не удалось выйти: {getErrorMessage(logoutMutation.error)}
+    <main className="app-page feed-page">
+      <header className="page-heading">
+        <p className="eyebrow">Твоя следующая история</p>
+        <h1>Лента знакомств</h1>
+        <p className="text-muted-foreground">
+          Люди рядом. То самое совпадение.
         </p>
-      )}
+      </header>
       <FeedFilters />
       <Feed />
     </main>
@@ -176,41 +134,43 @@ function Feed() {
       <p className="text-sm text-muted-foreground">
         Показано {items.length} из {total}
       </p>
-      {items.map((candidate) => (
-        <CandidateCard
-          key={candidate._id}
-          candidate={candidate}
-          cityName={
-            candidate.city ? cityNames.data?.get(candidate.city) : undefined
-          }
-          goalNames={(candidate.goals ?? [])
-            .map((id) => goalNames.get(id))
-            .filter((name): name is string => Boolean(name))}
-          actions={
-            <>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => passCandidate(queryClient, candidate._id)}
-                >
-                  Пропустить
-                </Button>
-                <Button onClick={() => likeCandidate(candidate)}>
-                  ♥ Нравится
-                </Button>
-              </div>
-              <UserSafetyActions
-                userId={candidate._id}
-                name={candidate.name}
-                onBlocked={() => {
-                  shifted.current = true;
-                  setBlocked(true);
-                }}
-              />
-            </>
-          }
-        />
-      ))}
+      <div className="candidate-grid">
+        {items.map((candidate) => (
+          <CandidateCard
+            key={candidate._id}
+            candidate={candidate}
+            cityName={
+              candidate.city ? cityNames.data?.get(candidate.city) : undefined
+            }
+            goalNames={(candidate.goals ?? [])
+              .map((id) => goalNames.get(id))
+              .filter((name): name is string => Boolean(name))}
+            actions={
+              <>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => passCandidate(queryClient, candidate._id)}
+                  >
+                    Пропустить
+                  </Button>
+                  <Button onClick={() => likeCandidate(candidate)}>
+                    ♥ Нравится
+                  </Button>
+                </div>
+                <UserSafetyActions
+                  userId={candidate._id}
+                  name={candidate.name}
+                  onBlocked={() => {
+                    shifted.current = true;
+                    setBlocked(true);
+                  }}
+                />
+              </>
+            }
+          />
+        ))}
+      </div>
       {candidates.isFetchNextPageError && (
         <p role="alert" className="text-sm text-destructive">
           Не удалось загрузить ещё: {getErrorMessage(candidates.error)}

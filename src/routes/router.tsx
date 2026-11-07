@@ -1,3 +1,5 @@
+import { AppShell } from '@/components/AppShell';
+import { FaqPage } from '@/pages/FaqPage';
 import { createBrowserRouter } from 'react-router';
 import { ProtectedRoute } from '@/routes/protected-route';
 import { LoginPage } from '@/pages/LoginPage';
@@ -9,17 +11,23 @@ import { ChatsPage } from '@/pages/ChatsPage';
 
 export const router = createBrowserRouter([
   {
-    path: '/login',
-    element: <LoginPage />,
-  },
-  {
-    element: <ProtectedRoute />,
+    element: <AppShell />,
     children: [
-      { path: '/', element: <HomePage /> },
-      { path: '/profile', element: <ProfilePage /> },
-      { path: '/matches', element: <MatchesPage /> },
-      { path: '/chats', element: <ChatsPage /> },
-      { path: '/chat/:dialogId', element: <ChatPage /> },
+      { path: '/faq', element: <FaqPage /> },
+      {
+        path: '/login',
+        element: <LoginPage />,
+      },
+      {
+        element: <ProtectedRoute />,
+        children: [
+          { path: '/', element: <HomePage /> },
+          { path: '/profile', element: <ProfilePage /> },
+          { path: '/matches', element: <MatchesPage /> },
+          { path: '/chats', element: <ChatsPage /> },
+          { path: '/chat/:dialogId', element: <ChatPage /> },
+        ],
+      },
     ],
   },
 ]);

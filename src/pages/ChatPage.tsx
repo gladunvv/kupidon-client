@@ -83,7 +83,7 @@ export function ChatPage() {
         height: viewport.height,
         transform: viewport.top ? `translateY(${viewport.top}px)` : undefined,
       }}
-      className="mx-auto flex h-dvh max-w-sm flex-col px-4"
+      className="chat-page mx-auto flex h-dvh w-full max-w-3xl flex-col px-4"
     >
       <header className="flex shrink-0 items-center gap-3 border-b border-border py-3">
         <Link
@@ -380,7 +380,7 @@ function Composer({
 
 function ConnectionStatus({ status }: { status: SocketStatus }) {
   if (status === 'connected') {
-    return <span className="text-xs text-muted-foreground">онлайн</span>;
+    return <span className="text-xs text-muted-foreground">Чат подключён</span>;
   }
   if (status === 'failed') {
     return (

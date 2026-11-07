@@ -12,7 +12,7 @@ export function ChatsPage() {
   const location = useLocation();
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-sm flex-col gap-4 px-4 py-6">
+    <main className="app-page list-page">
       <Link
         to="/"
         className="inline-flex min-h-11 items-center text-sm text-muted-foreground"
