@@ -1,3 +1,4 @@
+import { PhotoGallery } from '@/feed/PhotoGallery';
 import type { ReactNode } from 'react';
 import type { Candidate } from '@/types/candidate';
 
@@ -12,7 +13,6 @@ export function CandidateCard({
   goalNames: string[];
   actions?: ReactNode;
 }) {
-  const [photo] = candidate.photos;
   const title = [candidate.name ?? 'Без имени', candidate.age]
     .filter(Boolean)
     .join(', ');
@@ -25,18 +25,12 @@ export function CandidateCard({
     .join(' · ');
 
   return (
-    <article className="overflow-hidden rounded-xl border border-border">
-      {photo ? (
-        <img
-          src={photo}
-          alt={candidate.name ?? 'Фото кандидата'}
-          className="aspect-[4/5] w-full object-cover"
-        />
-      ) : (
-        <div className="flex aspect-[4/5] w-full items-center justify-center bg-muted text-sm text-muted-foreground">
-          Нет фото
-        </div>
-      )}
+    <article className="candidate-card">
+      <PhotoGallery
+        key={candidate._id}
+        photos={candidate.photos}
+        name={candidate.name ?? 'Без имени'}
+      />
       <div className="flex flex-col gap-2 p-4">
         <h2 className="text-lg font-semibold">
           {title}
