@@ -26,8 +26,11 @@ export function ProfilePage() {
   const profile = useProfile();
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-sm flex-col gap-6 px-4 py-8">
-      <Link to="/" className="text-sm text-muted-foreground">
+    <main className="app-page profile-page">
+      <Link
+        to="/"
+        className="inline-flex min-h-11 items-center text-sm text-muted-foreground"
+      >
         ← Лента
       </Link>
       <h1 className="text-2xl font-semibold">Профиль</h1>
@@ -44,8 +47,12 @@ export function ProfilePage() {
           </Button>
         </div>
       )}
-      {profile.data && <PhotosSection photos={profile.data.photos} />}
-      {profile.data && <ProfileForm profile={profile.data} />}
+      {profile.data && (
+        <div className="profile-layout">
+          <PhotosSection photos={profile.data.photos} />
+          <ProfileForm profile={profile.data} />
+        </div>
+      )}
       <DeleteAccountSection />
     </main>
   );
@@ -85,109 +92,118 @@ function ProfileForm({ profile }: { profile: Profile }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-      <Field id="phone" label="Телефон">
-        <Input id="phone" value={profile.phone} disabled />
-      </Field>
-      <Field id="name" label="Имя" error={errors.name}>
-        <Input
-          id="name"
-          autoComplete="given-name"
-          value={values.name}
-          onChange={(e) => set('name', e.target.value)}
-          aria-invalid={errors.name ? true : undefined}
-        />
-      </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field id="age" label="Возраст" error={errors.age}>
+    <form onSubmit={handleSubmit} className="profile-form" noValidate>
+      <fieldset className="surface-panel form-section">
+        <legend>О тебе</legend>
+        <Field id="phone" label="Телефон">
+          <Input id="phone" value={profile.phone} disabled />
+        </Field>
+        <Field id="name" label="Имя" error={errors.name}>
           <Input
-            id="age"
-            inputMode="numeric"
-            value={values.age}
-            onChange={(e) => set('age', e.target.value)}
-            aria-invalid={errors.age ? true : undefined}
+            id="name"
+            autoComplete="given-name"
+            value={values.name}
+            onChange={(e) => set('name', e.target.value)}
+            aria-invalid={errors.name ? true : undefined}
           />
         </Field>
-        <Field id="height" label="Рост, см" error={errors.height}>
+        <div className="grid grid-cols-2 gap-3">
+          <Field id="age" label="Возраст" error={errors.age}>
+            <Input
+              id="age"
+              inputMode="numeric"
+              value={values.age}
+              onChange={(e) => set('age', e.target.value)}
+              aria-invalid={errors.age ? true : undefined}
+            />
+          </Field>
+          <Field id="height" label="Рост, см" error={errors.height}>
+            <Input
+              id="height"
+              inputMode="numeric"
+              value={values.height}
+              onChange={(e) => set('height', e.target.value)}
+              aria-invalid={errors.height ? true : undefined}
+            />
+          </Field>
+        </div>
+        <Field id="gender" label="Пол">
+          <select
+            id="gender"
+            value={values.gender}
+            onChange={(e) => set('gender', e.target.value)}
+            className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-base md:text-sm"
+          >
+            <option value="">Не указан</option>
+            <option value="male">Мужской</option>
+            <option value="female">Женский</option>
+            {values.gender === 'other' && (
+              <option value="other" disabled>
+                Другой
+              </option>
+            )}
+          </select>
+        </Field>
+        <Field id="about" label="О себе" error={errors.about}>
+          <Textarea
+            id="about"
+            rows={4}
+            value={values.about}
+            onChange={(e) => set('about', e.target.value)}
+            aria-invalid={errors.about ? true : undefined}
+          />
+          <p className="text-xs text-muted-foreground">
+            {values.about.trim().length}/500
+          </p>
+        </Field>
+        <Field id="occupation" label="Работа" error={errors.occupation}>
           <Input
-            id="height"
-            inputMode="numeric"
-            value={values.height}
-            onChange={(e) => set('height', e.target.value)}
-            aria-invalid={errors.height ? true : undefined}
+            id="occupation"
+            value={values.occupation}
+            onChange={(e) => set('occupation', e.target.value)}
+            aria-invalid={errors.occupation ? true : undefined}
           />
         </Field>
-      </div>
-      <Field id="gender" label="Пол">
-        <select
-          id="gender"
-          value={values.gender}
-          onChange={(e) => set('gender', e.target.value)}
-          className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-base md:text-sm"
-        >
-          <option value="">Не указан</option>
-          <option value="male">Мужской</option>
-          <option value="female">Женский</option>
-          {values.gender === 'other' && (
-            <option value="other" disabled>
-              Другой
-            </option>
-          )}
-        </select>
-      </Field>
-      <Field id="about" label="О себе" error={errors.about}>
-        <Textarea
-          id="about"
-          rows={4}
-          value={values.about}
-          onChange={(e) => set('about', e.target.value)}
-          aria-invalid={errors.about ? true : undefined}
+        <Field id="education" label="Образование" error={errors.education}>
+          <Input
+            id="education"
+            value={values.education}
+            onChange={(e) => set('education', e.target.value)}
+            aria-invalid={errors.education ? true : undefined}
+          />
+        </Field>
+        <Field id="city" label="Город">
+          <CityPicker
+            value={values.city}
+            onChange={(city) => update({ city })}
+          />
+        </Field>
+      </fieldset>
+      <fieldset className="surface-panel form-section">
+        <legend>Интересы и образ жизни</legend>
+        <GoalsField
+          selected={values.goals}
+          onToggle={(id) => update((c) => ({ goals: toggleId(c.goals, id) }))}
         />
-        <p className="text-xs text-muted-foreground">
-          {values.about.trim().length}/500
-        </p>
-      </Field>
-      <Field id="occupation" label="Работа" error={errors.occupation}>
-        <Input
-          id="occupation"
-          value={values.occupation}
-          onChange={(e) => set('occupation', e.target.value)}
-          aria-invalid={errors.occupation ? true : undefined}
+        <InterestsField
+          selected={values.interests}
+          onToggle={(id) =>
+            update((c) => ({ interests: toggleId(c.interests, id) }))
+          }
         />
-      </Field>
-      <Field id="education" label="Образование" error={errors.education}>
-        <Input
-          id="education"
-          value={values.education}
-          onChange={(e) => set('education', e.target.value)}
-          aria-invalid={errors.education ? true : undefined}
+        <LifestyleField
+          selected={values.lifestyleOptions}
+          onSelect={(option, all) =>
+            update((c) => ({
+              lifestyleOptions: selectLifestyleOption(
+                c.lifestyleOptions,
+                option,
+                all,
+              ),
+            }))
+          }
         />
-      </Field>
-      <Field id="city" label="Город">
-        <CityPicker value={values.city} onChange={(city) => update({ city })} />
-      </Field>
-      <GoalsField
-        selected={values.goals}
-        onToggle={(id) => update((c) => ({ goals: toggleId(c.goals, id) }))}
-      />
-      <InterestsField
-        selected={values.interests}
-        onToggle={(id) =>
-          update((c) => ({ interests: toggleId(c.interests, id) }))
-        }
-      />
-      <LifestyleField
-        selected={values.lifestyleOptions}
-        onSelect={(option, all) =>
-          update((c) => ({
-            lifestyleOptions: selectLifestyleOption(
-              c.lifestyleOptions,
-              option,
-              all,
-            ),
-          }))
-        }
-      />
+      </fieldset>
       {mutation.error && (
         <p role="alert" className="text-sm text-destructive">
           Не удалось сохранить: {getErrorMessage(mutation.error)}

@@ -10,6 +10,7 @@ import {
 } from '@/api/safety';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { useDialogViewport } from '@/lib/use-visual-viewport';
 
 const REASONS: { value: ReportReason; label: string }[] = [
   { value: 'spam', label: 'Спам' },
@@ -65,6 +66,7 @@ function SafetyDialog({
   const reasonId = useId();
   const detailsId = useId();
   const submitted = useRef(false);
+  const viewportStyle = useDialogViewport();
   const queryClient = useQueryClient();
   const [screen, setScreen] = useState<
     'menu' | 'block' | 'report' | 'reported'
@@ -116,6 +118,7 @@ function SafetyDialog({
   return (
     <dialog
       ref={ref}
+      style={viewportStyle}
       onClose={onClose}
       onCancel={(event) => {
         if (mutation.isPending) event.preventDefault();

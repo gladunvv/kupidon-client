@@ -17,3 +17,22 @@ export function normalizePhone(input: string): string | null {
   }
   return null;
 }
+
+export function formatPhoneInput(input: string): string {
+  let digits = input.replace(/\D/g, '').slice(0, 15);
+  if (!digits) return input.includes('+') ? '+' : '';
+  if (!input.trim().startsWith('+') && digits.startsWith('9'))
+    digits = `7${digits}`;
+  if (!input.trim().startsWith('+') && digits.startsWith('8'))
+    digits = `7${digits.slice(1)}`;
+  if (!digits.startsWith('7') || digits.length > 11) return `+${digits}`;
+  return [
+    '+7',
+    digits.slice(1, 4),
+    digits.slice(4, 7),
+    digits.slice(7, 9),
+    digits.slice(9, 11),
+  ]
+    .filter(Boolean)
+    .join(' ');
+}

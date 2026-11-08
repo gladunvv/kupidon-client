@@ -1,3 +1,18 @@
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
+import { SortablePhoto } from '@/profile/SortablePhoto';
 import { useRef, useState, type ChangeEvent } from 'react';
 import { getErrorMessage } from '@/api/error-messages';
 import {
@@ -14,6 +29,13 @@ import {
 } from '@/profile/photo-validation';
 
 export function PhotosSection({ photos }: { photos: string[] }) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+  const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [fileErrors, setFileErrors] = useState<string[]>([]);
@@ -24,9 +46,14 @@ export function PhotosSection({ photos }: { photos: string[] }) {
   const remaining = MAX_PHOTOS - photos.length;
   const busy = upload.isPending || remove.isPending;
 
-  async function handleFiles(event: ChangeEvent<HTMLInputElement>) {
+  function handleFiles(event: ChangeEvent<HTMLInputElement>) {
     const picked = [...(event.target.files ?? [])];
     event.target.value = '';
+    void addFiles(picked);
+  }
+
+  async function addFiles(picked: File[]) {
+    if (busy) return;
     if (picked.length === 0) return;
     upload.reset();
 
@@ -57,114 +84,165 @@ export function PhotosSection({ photos }: { photos: string[] }) {
   }
 
   return (
-    <section className="flex flex-col gap-3">
+    <section
+      className={`surface-panel photos-section flex flex-col gap-3 ${dragOver ? 'drop-active' : ''}`}
+      onDragOver={(event) => {
+        if ([...event.dataTransfer.types].includes('Files')) {
+          event.preventDefault();
+          setDragOver(true);
+        }
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+          setDragOver(false);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        setDragOver(false);
+        if (!busy && remaining > 0)
+          void addFiles([...event.dataTransfer.files]);
+      }}
+    >
       <div className="flex items-baseline justify-between">
         <h2 className="text-sm font-medium">Фото</h2>
         <span className="text-xs text-muted-foreground">
           {photos.length} из {MAX_PHOTOS}
         </span>
       </div>
+      <p className="text-sm text-muted-foreground">
+        Перетащи фото сюда, чтобы добавить. За ручку — чтобы поменять порядок.
+      </p>
       {photos.length > 0 && (
-        <ul className="grid grid-cols-2 gap-3">
-          {photos.map((url, index) => (
-            <li key={url} className="flex flex-col gap-1.5">
-              <div className="relative">
-                <img
-                  src={url}
-                  alt={`Фото ${index + 1}`}
-                  className="aspect-square w-full rounded-lg object-cover"
-                />
-                {index === 0 && (
-                  <span className="absolute top-1.5 left-1.5 rounded-md bg-background/90 px-1.5 py-0.5 text-xs">
-                    Главное
-                  </span>
-                )}
-              </div>
-              {confirmDelete === url ? (
-                <div className="flex items-center justify-between gap-2 text-sm">
-                  <span>Удалить?</span>
-                  <div className="flex gap-1">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      disabled={busy}
-                      onClick={() =>
-                        remove.mutate(url, {
-                          onSettled: () => setConfirmDelete(null),
-                        })
-                      }
-                    >
-                      {remove.isPending ? 'Удаляем…' : 'Да'}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={remove.isPending}
-                      onClick={() => setConfirmDelete(null)}
-                    >
-                      Нет
-                    </Button>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={({ active, over }) => {
+            if (!over || active.id === over.id || busy) return;
+            reorder.reorder((list) => {
+              const from = list.indexOf(String(active.id)),
+                to = list.indexOf(String(over.id));
+              return from < 0 || to < 0 ? list : arrayMove(list, from, to);
+            });
+          }}
+          accessibility={{
+            screenReaderInstructions: {
+              draggable:
+                'Нажмите пробел, чтобы поднять фото. Стрелки меняют положение, пробел сохраняет, Escape отменяет.',
+            },
+          }}
+        >
+          <SortableContext items={photos} strategy={rectSortingStrategy}>
+            <ul className="grid grid-cols-2 gap-3">
+              {photos.map((url, index) => (
+                <SortablePhoto
+                  key={url}
+                  url={url}
+                  index={index}
+                  disabled={busy}
+                >
+                  <div className="relative">
+                    <img
+                      src={url}
+                      alt={`Фото ${index + 1}`}
+                      className="aspect-square w-full rounded-lg object-cover"
+                    />
+                    {index === 0 && (
+                      <span className="absolute top-1.5 left-1.5 rounded-md bg-background/90 px-1.5 py-0.5 text-xs">
+                        Главное
+                      </span>
+                    )}
                   </div>
-                </div>
-              ) : (
-                <div className="flex justify-between">
-                  <div className="flex gap-1">
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="outline"
-                      aria-label={`Сдвинуть фото ${index + 1} влево`}
-                      disabled={busy || index === 0}
-                      onClick={() =>
-                        reorder.reorder((list) => movePhoto(list, url, -1))
-                      }
-                    >
-                      ←
-                    </Button>
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="outline"
-                      aria-label={`Сдвинуть фото ${index + 1} вправо`}
-                      disabled={busy || index === photos.length - 1}
-                      onClick={() =>
-                        reorder.reorder((list) => movePhoto(list, url, 1))
-                      }
-                    >
-                      →
-                    </Button>
-                    {index > 0 && (
+                  {confirmDelete === url ? (
+                    <div className="flex flex-col gap-1.5 text-sm">
+                      <span>Удалить?</span>
+                      <div className="flex flex-wrap gap-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          disabled={busy}
+                          onClick={() =>
+                            remove.mutate(url, {
+                              onSettled: () => setConfirmDelete(null),
+                            })
+                          }
+                        >
+                          {remove.isPending ? 'Удаляем…' : 'Да'}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={remove.isPending}
+                          onClick={() => setConfirmDelete(null)}
+                        >
+                          Нет
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-1">
+                      <div className="contents">
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          className="w-full"
+                          variant="outline"
+                          aria-label={`Сдвинуть фото ${index + 1} влево`}
+                          disabled={busy || index === 0}
+                          onClick={() =>
+                            reorder.reorder((list) => movePhoto(list, url, -1))
+                          }
+                        >
+                          ←
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          className="w-full"
+                          variant="outline"
+                          aria-label={`Сдвинуть фото ${index + 1} вправо`}
+                          disabled={busy || index === photos.length - 1}
+                          onClick={() =>
+                            reorder.reorder((list) => movePhoto(list, url, 1))
+                          }
+                        >
+                          →
+                        </Button>
+                        {index > 0 && (
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            className="w-full"
+                            variant="outline"
+                            aria-label={`Сделать фото ${index + 1} главным`}
+                            disabled={busy}
+                            onClick={() =>
+                              reorder.reorder((list) => makeMain(list, url))
+                            }
+                          >
+                            ★
+                          </Button>
+                        )}
+                      </div>
                       <Button
                         type="button"
                         size="icon-sm"
+                        className="w-full"
                         variant="outline"
-                        aria-label={`Сделать фото ${index + 1} главным`}
+                        aria-label={`Удалить фото ${index + 1}`}
                         disabled={busy}
-                        onClick={() =>
-                          reorder.reorder((list) => makeMain(list, url))
-                        }
+                        onClick={() => setConfirmDelete(url)}
                       >
-                        ★
+                        ✕
                       </Button>
-                    )}
-                  </div>
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="outline"
-                    aria-label={`Удалить фото ${index + 1}`}
-                    disabled={busy}
-                    onClick={() => setConfirmDelete(url)}
-                  >
-                    ✕
-                  </Button>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
+                    </div>
+                  )}
+                </SortablePhoto>
+              ))}
+            </ul>
+          </SortableContext>
+        </DndContext>
       )}
       <input
         ref={inputRef}
