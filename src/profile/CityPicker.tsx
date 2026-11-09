@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useCities } from '@/api/reference';
 import { getErrorMessage } from '@/api/error-messages';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { City } from '@/types/reference';
 
@@ -44,17 +45,31 @@ export function CityPicker({
         value={search}
         onChange={(event) => setSearch(event.target.value)}
       />
-      {cities.isPending && (
-        <p className="text-sm text-muted-foreground">Ищем…</p>
-      )}
-      {cities.error && (
-        <p role="alert" className="text-sm text-destructive">
-          {getErrorMessage(cities.error)}
+      {(cities.isPending || cities.isFetching || search !== debounced) && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Ищем…
         </p>
       )}
-      {cities.data?.length === 0 && (
-        <p className="text-sm text-muted-foreground">Ничего не найдено</p>
+      {cities.error && (
+        <div className="flex flex-col gap-2">
+          <p role="alert" className="text-sm text-destructive">
+            Не удалось загрузить города: {getErrorMessage(cities.error)}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => cities.refetch()}
+          >
+            Повторить
+          </Button>
+        </div>
       )}
+      {!cities.isFetching &&
+        !cities.error &&
+        search === debounced &&
+        cities.data?.length === 0 && (
+          <p className="text-sm text-muted-foreground">Ничего не найдено</p>
+        )}
       <ul className="flex flex-col">
         {cities.data?.map((city) => (
           <li key={city._id}>

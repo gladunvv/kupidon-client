@@ -25,7 +25,26 @@ const GENDER_LABELS: Record<Gender, string> = {
 export function FeedFilters() {
   const profile = useProfile();
   const [open, setOpen] = useState(false);
-  if (!profile.data) return null;
+  if (!profile.data) {
+    return (
+      <section className="flex flex-col gap-3 rounded-xl border border-border p-3">
+        {profile.isPending ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            Загружаем фильтры…
+          </p>
+        ) : (
+          <>
+            <p role="alert" className="text-sm text-destructive">
+              Не удалось загрузить фильтры: {getErrorMessage(profile.error)}
+            </p>
+            <Button variant="outline" onClick={() => profile.refetch()}>
+              Повторить
+            </Button>
+          </>
+        )}
+      </section>
+    );
+  }
 
   const prefs = profile.data.searchPreferences;
   const hasLocation = (profile.data.coordinates?.length ?? 0) >= 2;

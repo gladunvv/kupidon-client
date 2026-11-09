@@ -248,7 +248,12 @@ function Field({
 function ReferenceState({
   query,
 }: {
-  query: { isPending: boolean; error: unknown; refetch: () => unknown };
+  query: {
+    isPending: boolean;
+    error: unknown;
+    data?: unknown[];
+    refetch: () => unknown;
+  };
 }) {
   if (query.isPending) {
     return <p className="text-sm text-muted-foreground">Загружаем…</p>;
@@ -264,6 +269,13 @@ function ReferenceState({
         >
           Повторить
         </button>
+      </p>
+    );
+  }
+  if (query.data?.length === 0) {
+    return (
+      <p role="status" className="text-sm text-muted-foreground">
+        Вариантов пока нет
       </p>
     );
   }

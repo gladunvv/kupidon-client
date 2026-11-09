@@ -121,6 +121,17 @@ export function ChatPage() {
         )}
       </header>
 
+      {details.isError && (
+        <div className="flex shrink-0 flex-wrap items-center gap-2 py-2">
+          <p role="alert" className="text-sm text-destructive">
+            Не удалось загрузить собеседника:{' '}
+            {getErrorMessage(details.error, 'chat')}
+          </p>
+          <Button variant="outline" size="sm" onClick={() => details.refetch()}>
+            Повторить
+          </Button>
+        </div>
+      )}
       <section
         ref={containerRef}
         onScroll={rememberPosition}
