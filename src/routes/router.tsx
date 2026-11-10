@@ -8,11 +8,14 @@ import { ProfilePage } from '@/pages/ProfilePage';
 import { ChatPage } from '@/pages/ChatPage';
 import { MatchesPage } from '@/pages/MatchesPage';
 import { ChatsPage } from '@/pages/ChatsPage';
+import { NotFoundPage, RouteErrorPage } from '@/routes/RouteStatus';
 
 export const router = createBrowserRouter([
   {
     element: <AppShell />,
+    errorElement: <RouteErrorPage />,
     children: [
+      { path: '*', element: <NotFoundPage /> },
       { path: '/faq', element: <FaqPage /> },
       {
         path: '/login',
