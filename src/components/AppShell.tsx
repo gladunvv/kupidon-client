@@ -1,3 +1,5 @@
+import { Suspense } from 'react';
+import { PageLoading } from '@/routes/RouteStatus';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { useMutation } from '@tanstack/react-query';
 import { Heart, LogOut } from 'lucide-react';
@@ -68,7 +70,9 @@ export function AppShell() {
           </p>
         )}
       </header>
-      <Outlet />
+      <Suspense fallback={<PageLoading />}>
+        <Outlet />
+      </Suspense>
     </div>
   );
 }
