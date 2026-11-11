@@ -1,18 +1,23 @@
+import {
+  FaqPage,
+  LoginPage,
+  HomePage,
+  ProfilePage,
+  ChatPage,
+  MatchesPage,
+  ChatsPage,
+} from '@/routes/lazy-pages';
 import { AppShell } from '@/components/AppShell';
-import { FaqPage } from '@/pages/FaqPage';
 import { createBrowserRouter } from 'react-router';
 import { ProtectedRoute } from '@/routes/protected-route';
-import { LoginPage } from '@/pages/LoginPage';
-import { HomePage } from '@/pages/HomePage';
-import { ProfilePage } from '@/pages/ProfilePage';
-import { ChatPage } from '@/pages/ChatPage';
-import { MatchesPage } from '@/pages/MatchesPage';
-import { ChatsPage } from '@/pages/ChatsPage';
+import { NotFoundPage, RouteErrorPage } from '@/routes/RouteStatus';
 
 export const router = createBrowserRouter([
   {
     element: <AppShell />,
+    errorElement: <RouteErrorPage />,
     children: [
+      { path: '*', element: <NotFoundPage /> },
       { path: '/faq', element: <FaqPage /> },
       {
         path: '/login',
