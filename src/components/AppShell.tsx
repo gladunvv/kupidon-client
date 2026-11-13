@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { PageLoading } from '@/routes/RouteStatus';
-import { Link, NavLink, Outlet, useLocation } from 'react-router';
+import { Link, NavLink, useLocation } from 'react-router';
+import { PageContent } from '@/routes/PageContent';
 import { useMutation } from '@tanstack/react-query';
 import { Heart, LogOut } from 'lucide-react';
 import { useAuth } from '@/auth/use-auth';
@@ -37,6 +38,9 @@ export function AppShell() {
   );
   return (
     <div className={chat ? 'chat-shell' : 'site-shell'}>
+      <a className="skip-link" href="#page-content">
+        Перейти к содержимому
+      </a>
       <header className="site-header">
         <div className="site-header-inner">
           <Link
@@ -71,7 +75,7 @@ export function AppShell() {
         )}
       </header>
       <Suspense fallback={<PageLoading />}>
-        <Outlet />
+        <PageContent />
       </Suspense>
     </div>
   );
