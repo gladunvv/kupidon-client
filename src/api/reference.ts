@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/api/client';
 import type { City, Goal, Interest, LifestyleOption } from '@/types/reference';
 
@@ -43,17 +43,18 @@ export function useCityNames() {
   });
 }
 
-export function useCities(search: string) {
+export function useCities(search: string, enabled = true) {
   const term = search.trim();
   return useQuery({
     queryKey: ['reference', 'cities', term],
-    queryFn: () =>
+    enabled,
+    queryFn: ({ signal }) =>
       apiRequest<City[]>(
         term
           ? `/reference/cities?${new URLSearchParams({ search: term, limit: '10' })}`
           : '/reference/cities/popular?limit=10',
+        { signal },
       ),
-    placeholderData: keepPreviousData,
     ...forever,
   });
 }

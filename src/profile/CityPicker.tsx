@@ -18,7 +18,16 @@ export function CityPicker({
   const previousOpen = useRef(open);
   const input = useRef<HTMLInputElement>(null);
   const changeButton = useRef<HTMLButtonElement>(null);
-  const cities = useCities(debounced);
+  const cities = useCities(debounced, open);
+  const currentSearch = search.trim() === debounced.trim();
+  const searching = !currentSearch || cities.isPending || cities.isFetching;
+  const results = !searching && !cities.error ? cities.data : undefined;
+
+  function close() {
+    setOpen(false);
+    setSearch('');
+    setDebounced('');
+  }
 
   useEffect(() => {
     if (previousOpen.current !== open) {
@@ -60,12 +69,12 @@ export function CityPicker({
         value={search}
         onChange={(event) => setSearch(event.target.value)}
       />
-      {(cities.isPending || cities.isFetching || search !== debounced) && (
+      {searching && (
         <p role="status" className="text-sm text-muted-foreground">
           Ищем…
         </p>
       )}
-      {cities.error && (
+      {currentSearch && cities.error && (
         <div className="flex flex-col gap-2">
           <p role="alert" className="text-sm text-destructive">
             Не удалось загрузить города: {getErrorMessage(cities.error)}
@@ -79,24 +88,20 @@ export function CityPicker({
           </Button>
         </div>
       )}
-      {!cities.isFetching &&
-        !cities.error &&
-        search === debounced &&
-        cities.data?.length === 0 && (
-          <p role="status" className="text-sm text-muted-foreground">
-            Ничего не найдено
-          </p>
-        )}
+      {results?.length === 0 && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Ничего не найдено
+        </p>
+      )}
       <ul className="flex flex-col">
-        {cities.data?.map((city) => (
+        {results?.map((city) => (
           <li key={city._id}>
             <button
               type="button"
               className="w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
               onClick={() => {
                 onChange(city);
-                setOpen(false);
-                setSearch('');
+                close();
               }}
             >
               {city.fullName ?? city.name}
@@ -104,6 +109,11 @@ export function CityPicker({
           </li>
         ))}
       </ul>
+      {value && (
+        <Button type="button" variant="outline" onClick={close}>
+          Отменить изменение города
+        </Button>
+      )}
     </div>
   );
 }
