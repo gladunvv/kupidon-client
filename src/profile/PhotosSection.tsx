@@ -37,6 +37,8 @@ export function PhotosSection({ photos }: { photos: string[] }) {
   );
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const adding = useRef(false);
+  const [validating, setValidating] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [fileErrors, setFileErrors] = useState<string[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export function PhotosSection({ photos }: { photos: string[] }) {
   const remove = useDeletePhoto();
   const reorder = useReorderPhotos();
   const remaining = MAX_PHOTOS - photos.length;
-  const busy = upload.isPending || remove.isPending;
+  const busy = validating || upload.isPending || remove.isPending;
 
   function handleFiles(event: ChangeEvent<HTMLInputElement>) {
     const picked = [...(event.target.files ?? [])];
@@ -53,33 +55,49 @@ export function PhotosSection({ photos }: { photos: string[] }) {
   }
 
   async function addFiles(picked: File[]) {
-    if (busy) return;
-    if (picked.length === 0) return;
+    // A ref closes the gap before React renders the disabled controls.
+    if (adding.current || busy || remaining <= 0 || picked.length === 0) return;
+    adding.current = true;
+    setValidating(true);
+    setFileErrors([]);
     upload.reset();
 
-    // Validate everything first, then cap by free slots: invalid files must
-    // not be the ones that push a valid file over the limit.
-    const errors: string[] = [];
-    const valid: File[] = [];
-    for (const file of picked) {
-      const error = await validatePhoto(file);
-      if (error) errors.push(`${file.name}: ${error}`);
-      else valid.push(file);
-    }
-    if (valid.length > remaining) {
-      errors.push(
-        `Можно добавить ещё ${remaining} — пропущено: ${valid
-          .slice(remaining)
-          .map((file) => file.name)
-          .join(', ')}`,
-      );
-    }
-    setFileErrors(errors);
+    try {
+      // Validate everything first, then cap by free slots: invalid files must
+      // not be the ones that push a valid file over the limit.
+      const errors: string[] = [];
+      const valid: File[] = [];
+      for (const file of picked) {
+        const error = await validatePhoto(file);
+        if (error) errors.push(`${file.name}: ${error}`);
+        else valid.push(file);
+      }
+      if (valid.length > remaining) {
+        errors.push(
+          `Можно добавить ещё ${remaining} — пропущено: ${valid
+            .slice(remaining)
+            .map((file) => file.name)
+            .join(', ')}`,
+        );
+      }
+      setFileErrors(errors);
+      setValidating(false);
 
-    const toUpload = valid.slice(0, remaining);
-    if (toUpload.length > 0) {
-      setProgress(0);
-      upload.mutate(toUpload, { onSettled: () => setProgress(null) });
+      const toUpload = valid.slice(0, remaining);
+      if (toUpload.length > 0) {
+        setProgress(0);
+        // Keep the lock until delivery succeeds or fails, including the gap
+        // between validation finishing and the mutation's pending render.
+        try {
+          await upload.mutateAsync(toUpload);
+        } catch {
+          // The mutation's error state renders the upload failure below.
+        }
+      }
+    } finally {
+      adding.current = false;
+      setValidating(false);
+      setProgress(null);
     }
   }
 
@@ -255,11 +273,16 @@ export function PhotosSection({ photos }: { photos: string[] }) {
       <Button
         type="button"
         variant="outline"
-        disabled={remaining <= 0 || upload.isPending}
+        disabled={remaining <= 0 || busy}
         onClick={() => inputRef.current?.click()}
       >
         {remaining <= 0 ? 'Загружено максимум фото' : 'Добавить фото'}
       </Button>
+      {validating && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Проверяем фото…
+        </p>
+      )}
       {progress !== null && (
         <div
           role="progressbar"
