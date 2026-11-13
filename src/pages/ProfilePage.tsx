@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useValidationFocus } from '@/lib/use-validation-focus';
 import type { LifestyleOption } from '@/types/reference';
 import type { Profile } from '@/types/user';
 
@@ -61,6 +62,7 @@ export function ProfilePage() {
 function ProfileForm({ profile }: { profile: Profile }) {
   const [values, setValues] = useState(() => toFormValues(profile));
   const [errors, setErrors] = useState<ProfileFormErrors>({});
+  const form = useValidationFocus(errors);
   const mutation = useUpdateProfile();
 
   // Functional form so taps landing in the same render frame each build on
@@ -92,7 +94,12 @@ function ProfileForm({ profile }: { profile: Profile }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="profile-form" noValidate>
+    <form
+      ref={form}
+      onSubmit={handleSubmit}
+      className="profile-form"
+      noValidate
+    >
       <fieldset className="surface-panel form-section">
         <legend>О тебе</legend>
         <Field id="phone" label="Телефон">
@@ -105,6 +112,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
             value={values.name}
             onChange={(e) => set('name', e.target.value)}
             aria-invalid={errors.name ? true : undefined}
+            aria-describedby={errors.name ? 'name-error' : undefined}
           />
         </Field>
         <div className="grid grid-cols-2 gap-3">
@@ -115,6 +123,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
               value={values.age}
               onChange={(e) => set('age', e.target.value)}
               aria-invalid={errors.age ? true : undefined}
+              aria-describedby={errors.age ? 'age-error' : undefined}
             />
           </Field>
           <Field id="height" label="Рост, см" error={errors.height}>
@@ -124,6 +133,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
               value={values.height}
               onChange={(e) => set('height', e.target.value)}
               aria-invalid={errors.height ? true : undefined}
+              aria-describedby={errors.height ? 'height-error' : undefined}
             />
           </Field>
         </div>
@@ -151,6 +161,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
             value={values.about}
             onChange={(e) => set('about', e.target.value)}
             aria-invalid={errors.about ? true : undefined}
+            aria-describedby={errors.about ? 'about-error' : undefined}
           />
           <p className="text-xs text-muted-foreground">
             {values.about.trim().length}/500
@@ -162,6 +173,9 @@ function ProfileForm({ profile }: { profile: Profile }) {
             value={values.occupation}
             onChange={(e) => set('occupation', e.target.value)}
             aria-invalid={errors.occupation ? true : undefined}
+            aria-describedby={
+              errors.occupation ? 'occupation-error' : undefined
+            }
           />
         </Field>
         <Field id="education" label="Образование" error={errors.education}>
@@ -170,6 +184,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
             value={values.education}
             onChange={(e) => set('education', e.target.value)}
             aria-invalid={errors.education ? true : undefined}
+            aria-describedby={errors.education ? 'education-error' : undefined}
           />
         </Field>
         <Field id="city" label="Город">
@@ -237,7 +252,7 @@ function Field({
       <Label htmlFor={id}>{label}</Label>
       {children}
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p id={`${id}-error`} role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}
