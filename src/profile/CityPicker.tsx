@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useCities } from '@/api/reference';
 import { getErrorMessage } from '@/api/error-messages';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,18 @@ export function CityPicker({
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
   const [open, setOpen] = useState(value === null);
+  const previousOpen = useRef(open);
+  const input = useRef<HTMLInputElement>(null);
+  const changeButton = useRef<HTMLButtonElement>(null);
   const cities = useCities(debounced);
+
+  useEffect(() => {
+    if (previousOpen.current !== open) {
+      previousOpen.current = open;
+      if (open) input.current?.focus();
+      else changeButton.current?.focus();
+    }
+  }, [open]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(search), 300);
@@ -27,7 +38,10 @@ export function CityPicker({
       <div className="flex items-center justify-between gap-3 rounded-lg border border-input px-2.5 py-1.5 text-sm">
         <span className="min-w-0 flex-1">{value.fullName ?? value.name}</span>
         <button
+          id="city"
+          ref={changeButton}
           type="button"
+          aria-label={`Изменить город: ${value.fullName ?? value.name}`}
           className="shrink-0 text-muted-foreground underline underline-offset-4"
           onClick={() => setOpen(true)}
         >
@@ -41,6 +55,7 @@ export function CityPicker({
     <div className="flex flex-col gap-2">
       <Input
         id="city"
+        ref={input}
         placeholder="Начните вводить город"
         value={search}
         onChange={(event) => setSearch(event.target.value)}
@@ -68,7 +83,9 @@ export function CityPicker({
         !cities.error &&
         search === debounced &&
         cities.data?.length === 0 && (
-          <p className="text-sm text-muted-foreground">Ничего не найдено</p>
+          <p role="status" className="text-sm text-muted-foreground">
+            Ничего не найдено
+          </p>
         )}
       <ul className="flex flex-col">
         {cities.data?.map((city) => (

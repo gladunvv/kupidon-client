@@ -5,6 +5,7 @@ import { useProfile } from '@/api/users';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useValidationFocus } from '@/lib/use-validation-focus';
 import { GeolocationFailure, getRoundedPosition } from '@/feed/geolocation';
 import {
   buildSearchPreferences,
@@ -94,6 +95,7 @@ function FiltersForm({
     toSearchForm(profile.searchPreferences),
   );
   const [errors, setErrors] = useState<SearchFormErrors>({});
+  const form = useValidationFocus(errors);
   const save = useUpdateSearchPreferences();
 
   function set(patch: Partial<SearchFormValues>) {
@@ -109,7 +111,12 @@ function FiltersForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+    <form
+      ref={form}
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-4"
+      noValidate
+    >
       <div className="grid grid-cols-2 gap-3">
         <NumberField
           id="minAge"
@@ -120,7 +127,7 @@ function FiltersForm({
         />
         <NumberField
           id="maxAge"
-          label="до"
+          label="Возраст до"
           value={values.maxAge}
           error={errors.maxAge}
           onChange={(maxAge) => set({ maxAge })}
@@ -239,9 +246,10 @@ function NumberField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-error` : undefined}
       />
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p id={`${id}-error`} role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}
